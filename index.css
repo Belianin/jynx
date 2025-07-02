@@ -1,0 +1,75 @@
+body {
+  color: white;
+  --var-console-color-red: #ff0000;
+  --var-console-color-black: #000000;
+  --var-console-color-green: #00ff00;
+  --var-console-color-yellow: #ffff00;
+  --var-console-color-blue: #0000ff;
+  --var-console-color-magenta: #ff00ff;
+  --var-console-color-cyan: #00ffff;
+  --var-console-color-white: #ffffff;
+  --var-console-color-gray: #888888;
+  margin: 0;
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.red {
+  color: var(--var-console-color-red);
+}
+.black {
+  color: var(--var-console-color-black);
+}
+.green {
+  color: var(--var-console-color-green);
+}
+.yellow {
+  color: var(--var-console-color-yellow);
+}
+.blue {
+  color: var(--var-console-color-blue);
+}
+.magenta {
+  color: var(--var-console-color-magenta);
+}
+.cyan {
+  color: var(--var-console-color-cyan);
+}
+.white {
+  color: var(--var-console-color-white);
+}
+.gray {
+  color: var(--var-console-color-gray);
+}
+
+#console {
+  background: black;
+  color: #ccc;
+  padding: 10px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  height: 400px;
+  width: 800px;
+  box-shadow: 0 0 10px #000;
+  border: 2px solid #333;
+  position: relative;
+}
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.cursor {
+  color: white;
+  animation: blink 1s step-start infinite;
+}

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WYSIWYG редактор консольного текста</title>
+    <style>
+      body {
+        --var-console-color-red: #ff0000
+        margin: 0;
+        background: #111;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      #toolbar {
+        margin-bottom: 10px;
+        display: flex;
+      }
+      .color-button {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #444;
+        margin-right: 5px;
+        cursor: pointer;
+      }
+      #editor {
+        background: black;
+        color: #ccc;
+        padding: 10px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-y: auto;
+        height: 400px;
+        width: 800px;
+        box-shadow: 0 0 10px #000;
+        border: 2px solid #333;
+      }
+      #output {
+        margin-top: 20px;
+        width: 800px;
+        color: white;
+        font-size: 12px;
+        white-space: pre;
+        background: #222;
+        padding: 10px;
+        border: 1px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div id="toolbar"></div>
+
+      <div id="editor" contenteditable="true">
+        Введите здесь текст и выберите цвет перед вводом.
+      </div>
+
+      <button onclick="exportText()">Экспорт</button>
+
+      <pre id="output"></pre>
+    </div>
+
+    <script>
+      const colors = {
+        black: "#000000",
+        red: "#ff0000",
+        green: "#00ff00",
+        yellow: "#ffff00",
+        blue: "#0000ff",
+        magenta: "#ff00ff",
+        cyan: "#00ffff",
+        white: "#ffffff",
+        gray: "#888888",
+      };
+
+      function applyColor(color) {
+        // document.execCommand("styleWithCSS", false, true);
+        document.execCommand("foreColor", false, getColorCode(color));
+      }
+      function getColorCode(color) {
+        return colors[color] || "#ccc";
+      }
+
+      const toolbar = document.getElementById("toolbar");
+
+      for (const [name, value] of Object.entries(colors)) {
+        const btn = document.createElement("button");
+        btn.className = "color-button";
+        btn.style.backgroundColor = value;
+        btn.title = name;
+        btn.onclick = (e) => {
+          e.preventDefault();
+          applyColor(name);
+        };
+        toolbar.appendChild(btn);
+      }
+
+      function exportText() {
+        const editor = document.getElementById("editor");
+        const output = document.getElementById("output");
+
+        const result = [];
+        const walker = document.createTreeWalker(
+          editor,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const parent = node.parentElement;
+
+          const color = window.getComputedStyle(parent).color;
+          for (const char of node.textContent) {
+            result.push({
+              text: char,
+              color: rgbToHex(color),
+            });
+          }
+        }
+
+        output.textContent = JSON.stringify(groupCharacters(result), null, 2);
+      }
+
+      function rgbToHex(rgb) {
+        const m = rgb.match(/\d+/g);
+        if (!m) return "#cccccc";
+        return (
+          "#" +
+          m
+            .slice(0, 3)
+            .map((x) => (+x).toString(16).padStart(2, "0"))
+            .join("")
+        );
+      }
+
+      function groupCharacters(arr) {
+        if (arr.length === 0) return [];
+
+        const grouped = [];
+        let current = { text: "", color: arr[0].color };
+
+        for (const item of arr) {
+          if (item.color === current.color) {
+            current.text += item.text;
+          } else {
+            grouped.push({ ...current });
+            current = { text: item.text, color: item.color };
+          }
+        }
+        grouped.push({ ...current });
+        return grouped;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "belyanin.zip",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.2.0"
+  }
+}

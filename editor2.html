@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WYSIWYG Console Text Editor</title>
+    <style>
+      body {
+        background: #222;
+        color: #ddd;
+        font-family: monospace;
+        padding: 20px;
+      }
+      #toolbar {
+        margin-bottom: 10px;
+      }
+      button {
+        margin-right: 5px;
+        padding: 5px 10px;
+        font-family: monospace;
+        cursor: pointer;
+      }
+      #editor {
+        background: #000;
+        color: #ccc;
+        padding: 10px;
+        white-space: pre-wrap;
+        min-height: 300px;
+        outline: none;
+      }
+      .color-black {
+        color: #000000;
+      }
+      .color-red {
+        color: #ff0000;
+      }
+      .color-green {
+        color: #00ff00;
+      }
+      .color-yellow {
+        color: #ffff00;
+      }
+      .color-blue {
+        color: #0000ff;
+      }
+      .color-magenta {
+        color: #ff00ff;
+      }
+      .color-cyan {
+        color: #00ffff;
+      }
+      .color-white {
+        color: #ffffff;
+      }
+      .color-gray {
+        color: #888888;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>WYSIWYG Console Text Editor</h2>
+
+    <div id="toolbar">
+      <button onclick="applyColor('black')">Black</button>
+      <button onclick="applyColor('red')">Red</button>
+      <button onclick="applyColor('green')">Green</button>
+      <button onclick="applyColor('yellow')">Yellow</button>
+      <button onclick="applyColor('blue')">Blue</button>
+      <button onclick="applyColor('magenta')">Magenta</button>
+      <button onclick="applyColor('cyan')">Cyan</button>
+      <button onclick="applyColor('white')">White</button>
+      <button onclick="applyColor('gray')">Gray</button>
+      <button onclick="exportText()">📦 Export</button>
+    </div>
+
+    <div id="editor" contenteditable="true"></div>
+
+    <h3>Export result:</h3>
+    <pre id="output"></pre>
+
+    <script>
+      function applyColor(color) {
+        document.execCommand("styleWithCSS", false, true);
+        document.execCommand("foreColor", false, getColorCode(color));
+      }
+      function getColorCode(color) {
+        return colors[color] || "#ccc";
+      }
+
+      const colors = {
+        black: "#000000",
+        red: "#ff0000",
+        green: "#00ff00",
+        yellow: "#ffff00",
+        blue: "#0000ff",
+        magenta: "#ff00ff",
+        cyan: "#00ffff",
+        white: "#ffffff",
+        gray: "#888888",
+      };
+
+      const toolbar = document.getElementById("toolbar");
+
+      for (const [name, value] of Object.entries(colors)) {
+        const btn = document.createElement("div");
+        btn.className = "color-button";
+        btn.style.backgroundColor = value;
+        btn.title = name;
+        btn.onclick = () => document.applyColor(name);
+        toolbar.appendChild(btn);
+      }
+
+      function exportText() {
+        const editor = document.getElementById("editor");
+        const output = document.getElementById("output");
+        const result = [];
+
+        function parseNode(node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            result.push({ text: node.nodeValue, color: currentColor });
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const color = node.style.color || currentColor;
+            Array.from(node.childNodes).forEach((child) => {
+              currentColor = color;
+              parseNode(child);
+            });
+          }
+        }
+
+        let currentColor = "#ccc";
+        Array.from(editor.childNodes).forEach((node) => parseNode(node));
+
+        output.textContent = JSON.stringify(result, null, 2);
+      }
+    </script>
+  </body>
+</html>
