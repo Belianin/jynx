@@ -73,10 +73,8 @@ export class Disk {
     return current;
   };
 
-  makeDirectory = (currentDirectory: string, path: string) => {
-    let current = path.startsWith("/")
-      ? this.root
-      : this.findDirectory(currentDirectory);
+  makeDirectory = (path: string) => {
+    let current = this.root as FolderLikeNode;
     for (let folder of path.split("/")) {
       if (folder === "") continue;
 
@@ -149,9 +147,11 @@ export const makeDirectoryCommand: ShellCommand = async function* (
   stdin,
   args
 ) {
-  // TODO: Get CURRENT_DIR
   try {
-    disk.makeDirectory(CURRENT_DIR, args[0]);
+    const path = args[0].startsWith("/")
+      ? args[0]
+      : CURRENT_DIR + "/" + args[0];
+    disk.makeDirectory(path);
     return 0;
   } catch (e: any) {
     if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };

@@ -222,8 +222,8 @@ async function runPipeline(commands: CommandToExecute[]) {
 }
 
 disk.makeFile("/sys/etc/env", "PATH=/sys/bin");
-disk.makeDirectory(CURRENT_DIR, "/sys/bin");
-disk.makeDirectory(CURRENT_DIR, CURRENT_DIR);
+disk.makeDirectory("/sys/bin");
+disk.makeDirectory(CURRENT_DIR);
 
 interface RedirectToken {
   fd: number; // дескриптор: 0,1,2 и т.п.
