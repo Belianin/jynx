@@ -110,36 +110,25 @@ export async function execute(text: string) {
   // if (args.length === 0) return;
   if (text === "") return;
 
-  try {
-    const parsed = shellParse(text);
-    const commandsToExecute: CommandToExecute[] = [];
-    for (let { args, redirects } of parsed) {
-      const commandName = args[0];
-      const command = commands[commandName];
-      if (!command) {
-        print(`Command '${commandName}' not found\n`);
-        return;
-      }
-
-      commandsToExecute.push({
-        command,
-        args: args.splice(1),
-        redirects,
-      });
-
-      await runPipeline(commandsToExecute);
-
-      // const result = command(emptyStdin(), args.splice(1));
-      // while (true) {
-      //   const { done, value } = await result.next();
-      //   if (done) {
-      //     break;
-      //   } else {
-      //     if (value.type === "stderr") print({ color: "red", value: value.data });
-      //     else print(value.data);
-      //   }
-      // }
+  const parsed = shellParse(text);
+  const commandsToExecute: CommandToExecute[] = [];
+  for (let { args, redirects } of parsed) {
+    const commandName = args[0];
+    const command = commands[commandName];
+    if (!command) {
+      print(`Command '${commandName}' not found\n`);
+      return;
     }
+
+    commandsToExecute.push({
+      command,
+      args: args.splice(1),
+      redirects,
+    });
+  }
+
+  try {
+    await runPipeline(commandsToExecute);
   } catch (e: any) {
     if (e instanceof Error) print(e.message);
     else print("Internal problem");
@@ -152,6 +141,7 @@ type CommandToExecute = CommandToken & {
 };
 
 async function runPipeline(commands: CommandToExecute[]) {
+  console.log(commands);
   const streams = commands.map(() => createStream());
 
   // Вспомогательная функция для создания WritableStreamLike
@@ -167,17 +157,11 @@ async function runPipeline(commands: CommandToExecute[]) {
   }
 
   const processes = commands.map(({ command, args, redirects }, i) => {
-    // stdin
     let stdin = i === 0 ? emptyStdin() : streams[i - 1];
-
-    // stdout
     let stdout: { write: (data: string) => void };
-    // stderr
     let stderr: { write: (data: string) => void } | null = null;
 
-    // Проверяем редиректы stdout
     const stdoutRedirect = redirects.find((r) => r.fd === 1);
-    // Проверяем редиректы stderr
     const stderrRedirect = redirects.find((r) => r.fd === 2);
 
     // Флаг для перенаправления stderr в stdout (например, 2>&1)
@@ -232,93 +216,6 @@ async function runPipeline(commands: CommandToExecute[]) {
   });
 
   await Promise.all(processes);
-}
-
-async function runPipeline3(commands: CommandToExecute[]) {
-  let stdIn = emptyStdin();
-  for (let command of commands) {
-    const x = await command.command(stdIn, command.args);
-    createStream();
-  }
-
-  const streams = commands.map(() => createStream());
-
-  const processes = commands.map(({ command, args }, i) => {
-    const stdin = i === 0 ? emptyStdin() : streams[i - 1];
-    const stdout = streams[i];
-
-    return (async () => {
-      const gen = command(stdin, args);
-      for await (const event of gen) {
-        if (event.type === "stdout") {
-          if (i < commands.length - 1) {
-            stdout.push(event.data);
-          } else {
-            print(event.data);
-          }
-        } else {
-          print({ color: "red", value: event.data });
-        }
-      }
-    })();
-  });
-
-  await Promise.all(processes);
-}
-
-async function runPipeline2(commands: CommandToExecute[]) {
-  const streams = commands.map(() => createStream());
-
-  const processes = commands.map(({ command, args }, i) => {
-    const stdin = i === 0 ? emptyStdin() : streams[i - 1];
-    const stdout = streams[i];
-
-    return (async () => {
-      const gen = command(stdin, args);
-      for await (const event of gen) {
-        if (event.type === "stdout") {
-          if (i < commands.length - 1) {
-            stdout.push(event.data);
-          } else {
-            print(event.data);
-          }
-        } else {
-          print({ color: "red", value: event.data });
-        }
-      }
-    })();
-  });
-
-  await Promise.all(processes);
-}
-
-function parseArgs(input: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-
-    if (char === "'") {
-      inQuotes = !inQuotes;
-    } else if (char === " " && !inQuotes) {
-      if (current !== "") {
-        result.push(current);
-        current = "";
-      }
-      // если пробелы подряд — пропускаем
-    } else {
-      current += char;
-    }
-  }
-
-  // добавить остаток если был
-  if (current !== "") {
-    result.push(current);
-  }
-
-  return result;
 }
 
 makeDirectory(CURRENT_DIR, CURRENT_DIR);
