@@ -1,14 +1,11 @@
+import { catCommand } from "./commands/cat";
 import {
   echoCommand,
   grep as grepCommand,
   print,
   PrintableText,
 } from "./commands/echo";
-import {
-  listDirectoryCommand,
-  makeDirectory,
-  makeDirectoryCommand,
-} from "./disk";
+import { disk, listDirectoryCommand, makeDirectoryCommand } from "./disk";
 
 export let CURRENT_DIR = "/users/guest";
 export let USERNAME = "guest";
@@ -49,7 +46,7 @@ const registerCommand = (name: string, command: ShellCommand) =>
 registerCommand("echo", echoCommand);
 registerCommand("grep", grepCommand);
 // registerCommand("type", typeCommand);
-// registerCommand("cat", catCommand);
+registerCommand("cat", catCommand);
 registerCommand("mkdir", makeDirectoryCommand);
 registerCommand("ls", listDirectoryCommand);
 // registerCommand("tree", treeCommand);
@@ -224,7 +221,9 @@ async function runPipeline(commands: CommandToExecute[]) {
   await Promise.all(processes);
 }
 
-makeDirectory(CURRENT_DIR, CURRENT_DIR);
+disk.makeFile("/sys/etc/env", "PATH=/sys/bin");
+disk.makeDirectory(CURRENT_DIR, "/sys/bin");
+disk.makeDirectory(CURRENT_DIR, CURRENT_DIR);
 
 interface RedirectToken {
   fd: number; // дескриптор: 0,1,2 и т.п.
