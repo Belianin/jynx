@@ -1,5 +1,3 @@
-import { CommandFunc } from "./shell";
-
 const fileSystem: Record<string, string> = {
   "/system/env": "TEST=TEST_VALUE\n",
 };
@@ -9,6 +7,6 @@ export const cat = (filename: string) => {
   return `File '${filename}' not found`;
 };
 
-export const catCommand: CommandFunc = (args) => {
-  return cat(args[0]);
-};
+// export const catCommand: ShellCommand = (args) => {
+//   return cat(args[0]);
+// };

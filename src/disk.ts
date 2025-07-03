@@ -1,4 +1,4 @@
-import { CommandFunc, CURRENT_DIR } from "./commands/shell";
+import { CURRENT_DIR, ShellCommand } from "./shell";
 
 type RootNode = {
   name: "";
@@ -6,6 +6,13 @@ type RootNode = {
 };
 type FileNode = {
   name: string;
+  content: string;
+  parent: DiskNode;
+};
+type ProgramFileNode = {
+  name: string;
+  // todo content?
+  call: ShellCommand;
   parent: DiskNode;
 };
 type FolderNode = {
@@ -75,34 +82,61 @@ export const makeDirectory = (currentDirectory: string, path: string) => {
   }
 };
 
-export const makeDirectoryCommand: CommandFunc = (args) => {
-  // TODO: Get CURRENT_DIR
-  makeDirectory(CURRENT_DIR, args[0]);
-  return "";
-};
-
-export const listDirectoryCommand: CommandFunc = (args) => {
-  const path = args.length === 0 ? CURRENT_DIR : args[0];
-  let folder = path.startsWith("/")
-    ? findDirectory(path)
-    : findDirectory(CURRENT_DIR + "/" + path);
-
-  return folder.children.map((x) => x.name).join("\t");
-};
-
-export const treeCommand: CommandFunc = (args) => {
-  let result = "/";
-
-  function add(node: DiskNode, intendation: number) {
-    result += "\t".repeat(intendation) + node.name + "\n";
-    if ("children" in node) {
-      for (let child of node.children) {
-        add(child, intendation + 1);
+export const makeFile = (path: string, content: string) => {
+  let current = root as FolderLikeNode;
+  const parts = path.split("/");
+  for (let i = 0; i < parts.length - 1; i++) {
+    const folder = parts[i];
+    if (folder === "") continue;
+    const next = current.children.find((x) => x.name === folder);
+    if (next) {
+      if ("children" in next) {
+        current = next;
+      } else {
+        makeDirectory(CURRENT_DIR, "/" + parts.slice(0, i).join("/"));
       }
+    } else {
+      const newFolder = {
+        parent: current,
+        children: [],
+        name: folder,
+      };
+      current.children.push(newFolder);
+      current = newFolder;
     }
   }
-
-  add(root, 0);
-
-  return result;
+  for (let folder of path.split("/")) {
+  }
 };
+
+// export const makeDirectoryCommand: ShellCommand = (args) => {
+//   // TODO: Get CURRENT_DIR
+//   makeDirectory(CURRENT_DIR, args[0]);
+//   return "";
+// };
+
+// export const listDirectoryCommand: ShellCommand = (args) => {
+//   const path = args.length === 0 ? CURRENT_DIR : args[0];
+//   let folder = path.startsWith("/")
+//     ? findDirectory(path)
+//     : findDirectory(CURRENT_DIR + "/" + path);
+
+//   return folder.children.map((x) => x.name).join("\t");
+// };
+
+// export const treeCommand: ShellCommand = (args) => {
+//   let result = "/";
+
+//   function add(node: DiskNode, intendation: number) {
+//     result += "\t".repeat(intendation) + node.name + "\n";
+//     if ("children" in node) {
+//       for (let child of node.children) {
+//         add(child, intendation + 1);
+//       }
+//     }
+//   }
+
+//   add(root, 0);
+
+//   return result;
+// };

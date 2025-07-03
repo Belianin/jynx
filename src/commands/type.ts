@@ -30,7 +30,6 @@ const print = (text: PrintableText, timeout: number): Promise<void> => {
   const printChar = () => {
     if (index >= text.value.length) {
       resolve();
-      console.log("resolved");
       return;
     }
     const char = text.value[index];

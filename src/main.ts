@@ -1,5 +1,5 @@
 import { createTextElement, print } from "./commands/echo";
-import { execute, getPrefix } from "./commands/shell";
+import { execute, getPrefix } from "./shell";
 
 export const consoleElement = document.getElementById("console")!;
 
@@ -56,7 +56,6 @@ let historyCounter = -1;
 
 const getHistoryCommand = (delta: number) => {
   historyCounter += delta;
-  console.log(historyCounter + " / " + history.length);
   if (historyCounter < -1) historyCounter = -1;
   if (historyCounter === -1) return "";
 
@@ -68,7 +67,6 @@ const getHistoryCommand = (delta: number) => {
 };
 
 consoleElement.addEventListener("keydown", (e) => {
-  console.log(e.key);
   if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
     inputText =
       inputText.slice(0, cursorPos) + e.key + inputText.slice(cursorPos);
