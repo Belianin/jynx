@@ -1,16 +1,9 @@
 import { catCommand } from "./commands/cat";
-import {
-  echoCommand,
-  grep as grepCommand,
-  print,
-  PrintableText,
-} from "./commands/echo";
-import {
-  disk,
-  FileNode,
-  listDirectoryCommand,
-  makeDirectoryCommand,
-} from "./disk";
+import { echoCommand, print, PrintableText } from "./commands/echo";
+import { grepCommand } from "./commands/grep";
+import { listDirectoryCommand } from "./commands/ls";
+import { makeDirectoryCommand } from "./commands/mkdir";
+import { disk, FileNode } from "./disk";
 
 export let CURRENT_DIR = "/users/guest";
 export let USERNAME = "guest";
