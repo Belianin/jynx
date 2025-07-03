@@ -1,5 +1,6 @@
-import { disk } from "../disk";
-import { CURRENT_DIR, ShellCommand } from "../shell";
+import { disk } from "../disk/disk";
+import { CURRENT_DIR } from "../shell/env";
+import { ShellCommand } from "../shell/types";
 
 export const makeDirectoryCommand: ShellCommand = async function* (
   stdin,

@@ -1,28 +1,11 @@
-import { CURRENT_DIR, ShellCommand } from "./shell";
-
-type RootNode = {
-  name: "";
-  children: NonRoot[];
-};
-export type FileNode = {
-  name: string;
-  content: string;
-  parent: DiskNode;
-};
-type ProgramFileNode = {
-  name: string;
-  // todo content?
-  command: ShellCommand;
-  parent: DiskNode;
-};
-type FolderNode = {
-  name: string;
-  children: NonRoot[];
-  parent: DiskNode;
-};
-type FolderLikeNode = FolderNode | RootNode;
-type NonRoot = FolderNode | FileNode | ProgramFileNode;
-type DiskNode = NonRoot | RootNode;
+import { ShellCommand } from "../shell/types";
+import {
+  DiskNode,
+  FileNode,
+  FolderLikeNode,
+  ProgramFileNode,
+  RootNode,
+} from "./types";
 
 export class Disk {
   root: RootNode = {
@@ -175,45 +158,6 @@ function getPath(node: DiskNode) {
 
   return parts.reverse().join("/");
 }
-
-export const makeDirectoryCommand: ShellCommand = async function* (
-  stdin,
-  args
-) {
-  try {
-    const path = args[0].startsWith("/")
-      ? args[0]
-      : CURRENT_DIR + "/" + args[0];
-    disk.makeDirectory(path);
-    return 0;
-  } catch (e: any) {
-    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
-    else yield { type: "stderr", data: "Internal error\n" };
-  }
-
-  return 1;
-};
-
-export const listDirectoryCommand: ShellCommand = async function* (
-  stdin,
-  args
-) {
-  try {
-    const path = args.length === 0 ? CURRENT_DIR : args[0];
-    let folder = path.startsWith("/")
-      ? disk.findDirectory(path)
-      : disk.findDirectory(CURRENT_DIR + "/" + path);
-
-    const result = folder.children.map((x) => x.name).join("\t") + "\n";
-    yield { type: "stdout", data: result };
-    return 0;
-  } catch (e: any) {
-    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
-    else yield { type: "stderr", data: "Internal error\n" };
-  }
-
-  return 1;
-};
 
 // export const treeCommand: ShellCommand = (args) => {
 //   let result = "/";

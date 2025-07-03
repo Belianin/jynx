@@ -1,13 +1,13 @@
-import { catCommand } from "./commands/cat";
-import { echoCommand, print, PrintableText } from "./commands/echo";
-import { grepCommand } from "./commands/grep";
-import { listDirectoryCommand } from "./commands/ls";
-import { makeDirectoryCommand } from "./commands/mkdir";
-import { disk, FileNode } from "./disk";
-
-export let CURRENT_DIR = "/users/guest";
-export let USERNAME = "guest";
-export const DOMAIN = "belyanin.zip";
+import { catCommand } from "../commands/cat";
+import { echoCommand } from "../commands/echo";
+import { grepCommand } from "../commands/grep";
+import { listDirectoryCommand } from "../commands/ls";
+import { makeDirectoryCommand } from "../commands/mkdir";
+import { disk } from "../disk/disk";
+import { FileNode } from "../disk/types";
+import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
+import { PrintableText, print } from "./print";
+import { ShellCommand, Stream, WritableStreamLike } from "./types";
 
 export const getPrefix = (): PrintableText[] => {
   return [
@@ -24,25 +24,6 @@ export const getPrefix = (): PrintableText[] => {
     },
   ];
 };
-
-type StreamEvent = {
-  type: "stdout" | "stderr";
-  data: string;
-};
-export type CommandOutput = AsyncGenerator<StreamEvent, number, void>;
-
-export type ShellCommand = (
-  stdin: AsyncIterable<string>,
-  args: string[]
-) => CommandOutput;
-
-export interface WritableStreamLike {
-  write(data: string): void;
-}
-
-export interface Stream extends AsyncIterable<string>, WritableStreamLike {
-  close(): void;
-}
 
 function createStream(): Stream {
   const queue: string[] = [];
@@ -61,12 +42,7 @@ function createStream(): Stream {
         }
       }
     },
-    // push(data: string) {
-    //   queue.push(data);
-    //   resolve?.();
-    // },
     write(data: string) {
-      // this.push(data);
       queue.push(data);
       resolve?.();
     },
@@ -81,9 +57,7 @@ function createStream(): Stream {
   return stream;
 }
 
-export async function* emptyStdin(): AsyncIterable<string> {
-  // ничего не отдаём
-}
+export async function* emptyStdin(): AsyncIterable<string> {}
 
 export async function execute(text: string) {
   // const args = parseArgs(text);

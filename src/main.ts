@@ -1,5 +1,5 @@
-import { createTextElement, print } from "./commands/echo";
-import { execute, getPrefix } from "./shell";
+import { createTextElement, print } from "./shell/print";
+import { execute, getPrefix } from "./shell/shell";
 
 export const consoleElement = document.getElementById("console")!;
 

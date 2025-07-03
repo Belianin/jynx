@@ -1,5 +1,5 @@
 import { consoleElement, inputElement, scrollToBottom } from "../main";
-import { defaultColor, PrintableText } from "./echo";
+import { PrintableText, defaultColor } from "../shell/print";
 
 const defaultTimeout = 30;
 

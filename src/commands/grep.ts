@@ -1,4 +1,4 @@
-import { ShellCommand } from "../shell";
+import { ShellCommand } from "../shell/types";
 
 export const grepCommand: ShellCommand = async function* (stdin, args) {
   const pattern = args.length > 0 ? args[0] : "";

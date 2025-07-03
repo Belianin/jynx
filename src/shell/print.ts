@@ -1,5 +1,4 @@
 import { consoleElement, inputElement, scrollToBottom } from "../main";
-import { ShellCommand } from "../shell/shell";
 
 export const colors = [
   "black",
@@ -41,15 +40,3 @@ export const createTextElement = (text: PrintableText) => {
   span.classList.add(text.color || defaultColor);
   return span;
 };
-
-export const echoCommand: ShellCommand = async function* echoCommand(
-  stdin,
-  args
-) {
-  yield { type: "stdout", data: args?.join(" ") + "\n" };
-  return 0;
-};
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
