@@ -4,7 +4,7 @@ type RootNode = {
   name: "";
   children: NonRoot[];
 };
-type FileNode = {
+export type FileNode = {
   name: string;
   content: string;
   parent: DiskNode;
@@ -12,7 +12,7 @@ type FileNode = {
 type ProgramFileNode = {
   name: string;
   // todo content?
-  call: ShellCommand;
+  command: ShellCommand;
   parent: DiskNode;
 };
 type FolderNode = {
@@ -21,7 +21,7 @@ type FolderNode = {
   parent: DiskNode;
 };
 type FolderLikeNode = FolderNode | RootNode;
-type NonRoot = FolderNode | FileNode;
+type NonRoot = FolderNode | FileNode | ProgramFileNode;
 type DiskNode = NonRoot | RootNode;
 
 export class Disk {
@@ -95,6 +95,39 @@ export class Disk {
         current = newFolder;
       }
     }
+  };
+
+  // todo copyaster
+  makeSysFile = (path: string, command: ShellCommand) => {
+    let current = this.root as FolderLikeNode;
+    const parts = path.split("/");
+    for (let i = 0; i < parts.length - 1; i++) {
+      const folder = parts[i];
+      if (folder === "") continue;
+
+      const next = current.children.find((x) => x.name === folder);
+      if (next) {
+        if ("children" in next) {
+          current = next;
+        } else {
+          throw new Error("There is alread a file in a path");
+        }
+      } else {
+        const newFolder = {
+          parent: current,
+          children: [],
+          name: folder,
+        };
+        current.children.push(newFolder);
+        current = newFolder;
+      }
+    }
+    const file: ProgramFileNode = {
+      parent: current,
+      command,
+      name: parts[parts.length - 1],
+    };
+    current.children.push(file);
   };
 
   makeFile = (path: string, content: string) => {

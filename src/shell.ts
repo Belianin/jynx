@@ -5,7 +5,12 @@ import {
   print,
   PrintableText,
 } from "./commands/echo";
-import { disk, listDirectoryCommand, makeDirectoryCommand } from "./disk";
+import {
+  disk,
+  FileNode,
+  listDirectoryCommand,
+  makeDirectoryCommand,
+} from "./disk";
 
 export let CURRENT_DIR = "/users/guest";
 export let USERNAME = "guest";
@@ -37,19 +42,6 @@ export type ShellCommand = (
   stdin: AsyncIterable<string>,
   args: string[]
 ) => CommandOutput;
-
-const commands: Record<string, ShellCommand> = {};
-
-const registerCommand = (name: string, command: ShellCommand) =>
-  (commands[name] = command);
-
-registerCommand("echo", echoCommand);
-registerCommand("grep", grepCommand);
-// registerCommand("type", typeCommand);
-registerCommand("cat", catCommand);
-registerCommand("mkdir", makeDirectoryCommand);
-registerCommand("ls", listDirectoryCommand);
-// registerCommand("tree", treeCommand);
 
 export interface WritableStreamLike {
   write(data: string): void;
@@ -105,6 +97,8 @@ export async function execute(text: string) {
   // if (args.length === 0) return;
   if (text === "") return;
 
+  const commands = getPathCommands();
+
   const parsed = shellParse(text);
   const commandsToExecute: CommandToExecute[] = [];
   for (let { args, redirects } of parsed) {
@@ -129,6 +123,34 @@ export async function execute(text: string) {
     else print("Internal problem");
     print("\n");
   }
+}
+
+function getPathCommands() {
+  const commands: Record<string, ShellCommand> = {};
+  for (let path of getEnvPaths()) {
+    const dir = disk.findDirectory(path);
+    for (let node of dir.children) {
+      if ("command" in node) commands[node.name] = node.command;
+    }
+  }
+
+  return commands;
+}
+
+function getEnvPaths() {
+  const envFile = disk.find(envPath) as FileNode;
+  var envs = envFile.content.split("\n");
+
+  for (let envRecord of envs) {
+    if (envRecord.startsWith("PATH=")) {
+      return envRecord
+        .substring(5)
+        .split(";")
+        .filter((x) => x.trim() !== "");
+    }
+  }
+
+  throw new Error("Failed to load PATH");
 }
 
 type CommandToExecute = CommandToken & {
@@ -220,10 +242,6 @@ async function runPipeline(commands: CommandToExecute[]) {
 
   await Promise.all(processes);
 }
-
-disk.makeFile("/sys/etc/env", "PATH=/sys/bin");
-disk.makeDirectory("/sys/bin");
-disk.makeDirectory(CURRENT_DIR);
 
 interface RedirectToken {
   fd: number; // дескриптор: 0,1,2 и т.п.
@@ -403,3 +421,21 @@ function parseRedirectToken(token: string): {
   }
   throw new Error("Неизвестный тип перенаправления " + token);
 }
+
+const sysProgramsPath = "/sys/bin";
+const envPath = "/sys/etc/env";
+
+const commandToRegister: Record<string, ShellCommand> = {
+  echo: echoCommand,
+  grep: grepCommand,
+  cat: catCommand,
+  mkdir: makeDirectoryCommand,
+  ls: listDirectoryCommand,
+};
+for (let [name, command] of Object.entries(commandToRegister)) {
+  disk.makeSysFile(`${sysProgramsPath}/${name}`, command);
+}
+
+disk.makeFile(envPath, `PATH=${sysProgramsPath}`);
+disk.makeDirectory(sysProgramsPath);
+disk.makeDirectory(CURRENT_DIR);
