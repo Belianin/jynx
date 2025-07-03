@@ -19,14 +19,14 @@ export type PrintableText = {
   color?: Color;
 };
 
-export const echo = (value: string | PrintableText | PrintableText[]) => {
-  if (typeof value === "string") print({ value, color: defaultColor });
+export const print = (value: string | PrintableText | PrintableText[]) => {
+  if (typeof value === "string") printPart({ value, color: defaultColor });
   else if (Array.isArray(value)) {
-    for (let text of value) print(text);
-  } else print(value);
+    for (let text of value) printPart(text);
+  } else printPart(value);
 };
 
-const print = (text: PrintableText) => {
+const printPart = (text: PrintableText) => {
   const span = document.createElement("span");
   span.textContent = text.value;
   span.classList.add(text.color || defaultColor);
@@ -41,11 +41,6 @@ export const createTextElement = (text: PrintableText) => {
   return span;
 };
 
-export const echoCommand = (args: string[]): void => {
-  for (let i = 0; i < args.length - 1; i++) {
-    echo(args[i]);
-    echo(" ");
-  }
-  echo(args[args.length - 1]);
-  echo("\n");
+export const echoCommand = (args: string[]): string => {
+  return args.join(" ");
 };

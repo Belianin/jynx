@@ -1,7 +1,14 @@
-import { echo, echoCommand, PrintableText } from "./echo";
+import {
+  listDirectoryCommand,
+  makeDirectory,
+  makeDirectoryCommand,
+  treeCommand,
+} from "../disk";
+import { catCommand } from "./cat";
+import { echoCommand, print, PrintableText } from "./echo";
 import { typeCommand } from "./type";
 
-export let CURRENT_DIR = "/root/usr";
+export let CURRENT_DIR = "/users/guest";
 export let USERNAME = "guest";
 export const DOMAIN = "belyanin.zip";
 
@@ -16,12 +23,12 @@ export const getPrefix = (): PrintableText[] => {
     },
     {
       value: CURRENT_DIR + " ",
-      color: "cyan",
+      color: "magenta",
     },
   ];
 };
 
-export type CommandFunc = (args: string[]) => void | Promise<any>;
+export type CommandFunc = (args: string[]) => string | Promise<string>;
 
 const commands: Record<string, CommandFunc> = {};
 
@@ -30,6 +37,10 @@ const registerCommand = (name: string, command: CommandFunc) =>
 
 registerCommand("echo", echoCommand);
 registerCommand("type", typeCommand);
+registerCommand("cat", catCommand);
+registerCommand("mkdir", makeDirectoryCommand);
+registerCommand("ls", listDirectoryCommand);
+registerCommand("tree", treeCommand);
 
 export async function execute(text: string) {
   console.log(Object.keys(commands));
@@ -40,9 +51,21 @@ export async function execute(text: string) {
   //   const command = await getCommand(commandName);
   const command = commands[commandName];
   if (!!command) {
-    const result = command(args.splice(1));
-    if (result instanceof Promise) await result;
-  } else echo(`Command '${commandName}' not found\n`);
+    try {
+      const result = command(args.splice(1));
+      if (result instanceof Promise) {
+        const asyncResult = await result;
+        print(asyncResult);
+      } else {
+        print(result);
+      }
+      if (result !== "") print("\n");
+    } catch (e: any) {
+      if (e instanceof Error) print(e.message);
+      else print("Internal problem");
+      print("\n");
+    }
+  } else print(`Command '${commandName}' not found\n`);
 }
 
 function parseArgs(input: string): string[] {
@@ -73,3 +96,5 @@ function parseArgs(input: string): string[] {
 
   return result;
 }
+
+makeDirectory(CURRENT_DIR, CURRENT_DIR);

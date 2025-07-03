@@ -1,4 +1,4 @@
-import { createTextElement, echo, PrintableText } from "./commands/echo";
+import { createTextElement, print } from "./commands/echo";
 import { execute, getPrefix } from "./commands/shell";
 
 export const consoleElement = document.getElementById("console")!;
@@ -70,7 +70,6 @@ const getHistoryCommand = (delta: number) => {
 consoleElement.addEventListener("keydown", (e) => {
   console.log(e.key);
   if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-    // Ввод символа
     inputText =
       inputText.slice(0, cursorPos) + e.key + inputText.slice(cursorPos);
     cursorPos++;
@@ -119,19 +118,11 @@ consoleElement.addEventListener("keydown", (e) => {
     render();
     e.preventDefault();
   } else if (e.key === "Enter") {
-    // Можно сделать вывод строки в консоль
-    console.log("Ввод:", inputText);
-
-    // TODO PRING PREFIX
-    echo(getPrefix());
-    echo(inputText + "\n");
+    print(getPrefix());
+    print(inputText + "\n");
     execute(inputText);
     historyCounter = -1;
     history.push(inputText);
-    // consoleElement.insertBefore(
-    //   document.createTextNode(inputText + "\n"),
-    //   inputElement
-    // );
     inputText = "";
     cursorPos = 0;
     render();
@@ -147,21 +138,21 @@ render();
 
 //   let cursor = document.getElementById("cursor");
 // TODO: не создавать span на каждую букву. Достаточно на цвет
-const outputQueue: PrintableText[] = [
-  { value: "Initializing system...\n", color: "gray" },
-  { value: "Loading modules: ", color: "white" },
-  { value: "[OK]\n", color: "green" },
-  { value: "Connecting to server: ", color: "white" },
-  { value: "[FAIL]\n", color: "red" },
-  { value: "Attempting recovery...\n", color: "yellow" },
-  { value: "Recovered successfully.\n", color: "green" },
-  { value: "Starting services...\n", color: "white" },
-  { value: "All systems online.\n", color: "cyan" },
-  { value: "Welcome, Commander.\n", color: "magenta" },
-];
+// const outputQueue: PrintableText[] = [
+//   { value: "Initializing system...\n", color: "gray" },
+//   { value: "Loading modules: ", color: "white" },
+//   { value: "[OK]\n", color: "green" },
+//   { value: "Connecting to server: ", color: "white" },
+//   { value: "[FAIL]\n", color: "red" },
+//   { value: "Attempting recovery...\n", color: "yellow" },
+//   { value: "Recovered successfully.\n", color: "green" },
+//   { value: "Starting services...\n", color: "white" },
+//   { value: "All systems online.\n", color: "cyan" },
+//   { value: "Welcome, Commander.\n", color: "magenta" },
+// ];
 
-// type(); // Обработка нажатий клавиш
-for (let text of outputQueue) {
-  //   await type(text);
-  echo(text);
-}
+// // type(); // Обработка нажатий клавиш
+// for (let text of outputQueue) {
+//   //   await type(text);
+//   print(text);
+// }

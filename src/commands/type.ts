@@ -47,6 +47,7 @@ const print = (text: PrintableText, timeout: number): Promise<void> => {
   return promise;
 };
 
-export const typeCommand = (args: string[]): void => {
-  type(args[0] + "\n", args.length > 1 ? parseInt(args[1]) : undefined);
+export const typeCommand = (args: string[]): string => {
+  type(args[0], args.length > 1 ? parseInt(args[1]) : undefined);
+  return "";
 };
