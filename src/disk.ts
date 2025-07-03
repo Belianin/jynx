@@ -109,20 +109,42 @@ export const makeFile = (path: string, content: string) => {
   }
 };
 
-// export const makeDirectoryCommand: ShellCommand = (args) => {
-//   // TODO: Get CURRENT_DIR
-//   makeDirectory(CURRENT_DIR, args[0]);
-//   return "";
-// };
+export const makeDirectoryCommand: ShellCommand = async function* (
+  stdin,
+  args
+) {
+  // TODO: Get CURRENT_DIR
+  try {
+    makeDirectory(CURRENT_DIR, args[0]);
+    return 0;
+  } catch (e: any) {
+    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
+    else yield { type: "stderr", data: "Internal error\n" };
+  }
 
-// export const listDirectoryCommand: ShellCommand = (args) => {
-//   const path = args.length === 0 ? CURRENT_DIR : args[0];
-//   let folder = path.startsWith("/")
-//     ? findDirectory(path)
-//     : findDirectory(CURRENT_DIR + "/" + path);
+  return 1;
+};
 
-//   return folder.children.map((x) => x.name).join("\t");
-// };
+export const listDirectoryCommand: ShellCommand = async function* (
+  stdin,
+  args
+) {
+  try {
+    const path = args.length === 0 ? CURRENT_DIR : args[0];
+    let folder = path.startsWith("/")
+      ? findDirectory(path)
+      : findDirectory(CURRENT_DIR + "/" + path);
+
+    const result = folder.children.map((x) => x.name).join("\t") + "\n";
+    yield { type: "stdout", data: result };
+    return 0;
+  } catch (e: any) {
+    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
+    else yield { type: "stderr", data: "Internal error\n" };
+  }
+
+  return 1;
+};
 
 // export const treeCommand: ShellCommand = (args) => {
 //   let result = "/";

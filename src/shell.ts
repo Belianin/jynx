@@ -4,7 +4,11 @@ import {
   print,
   PrintableText,
 } from "./commands/echo";
-import { makeDirectory } from "./disk";
+import {
+  listDirectoryCommand,
+  makeDirectory,
+  makeDirectoryCommand,
+} from "./disk";
 
 export let CURRENT_DIR = "/users/guest";
 export let USERNAME = "guest";
@@ -46,55 +50,49 @@ registerCommand("echo", echoCommand);
 registerCommand("grep", grepCommand);
 // registerCommand("type", typeCommand);
 // registerCommand("cat", catCommand);
-// registerCommand("mkdir", makeDirectoryCommand);
-// registerCommand("ls", listDirectoryCommand);
+registerCommand("mkdir", makeDirectoryCommand);
+registerCommand("ls", listDirectoryCommand);
 // registerCommand("tree", treeCommand);
 
-function createStream2() {
-  let push: (data: string) => void;
-  const queue: string[] = [];
-  let resolve: (() => void) | null = null;
-
-  const stream = {
-    async *[Symbol.asyncIterator]() {
-      while (true) {
-        if (queue.length) {
-          yield queue.shift()!;
-        } else {
-          await new Promise<void>((r) => (resolve = r));
-        }
-      }
-    },
-    push(data: string) {
-      queue.push(data);
-      resolve?.();
-    },
-  };
-
-  return stream;
+export interface WritableStreamLike {
+  write(data: string): void;
 }
 
-function createStream() {
-  let push: (data: string) => void;
+export interface Stream extends AsyncIterable<string>, WritableStreamLike {
+  close(): void;
+}
+
+function createStream(): Stream {
   const queue: string[] = [];
   let resolve: (() => void) | null = null;
+  let isClosed = false;
 
   const stream = {
     async *[Symbol.asyncIterator]() {
       while (true) {
         if (queue.length) {
           yield queue.shift()!;
+        } else if (isClosed) {
+          break;
         } else {
           await new Promise<void>((r) => (resolve = r));
         }
       }
     },
-    push(data: string) {
+    // push(data: string) {
+    //   queue.push(data);
+    //   resolve?.();
+    // },
+    write(data: string) {
+      // this.push(data);
       queue.push(data);
       resolve?.();
     },
-    write(data: string) {
-      this.push(data);
+    close() {
+      isClosed = true;
+      if (resolve) {
+        resolve();
+      }
     },
   };
 
@@ -130,7 +128,7 @@ export async function execute(text: string) {
   try {
     await runPipeline(commandsToExecute);
   } catch (e: any) {
-    if (e instanceof Error) print(e.message);
+    if (e instanceof Error) print({ color: "red", value: e.message });
     else print("Internal problem");
     print("\n");
   }
@@ -148,18 +146,20 @@ async function runPipeline(commands: CommandToExecute[]) {
   // Например, редирект в файл — здесь просто вывод с префиксом (замени под себя)
   function createWriteStream(target: string): {
     write: (data: string) => void;
+    close: () => void;
   } {
     return {
       write(data: string) {
         print(`[Redirect to ${target}]: ${data}`);
       },
+      close: () => {},
     };
   }
 
   const processes = commands.map(({ command, args, redirects }, i) => {
     let stdin = i === 0 ? emptyStdin() : streams[i - 1];
-    let stdout: { write: (data: string) => void };
-    let stderr: { write: (data: string) => void } | null = null;
+    let stdout: WritableStreamLike | Stream;
+    let stderr: WritableStreamLike | Stream | null = null;
 
     const stdoutRedirect = redirects.find((r) => r.fd === 1);
     const stderrRedirect = redirects.find((r) => r.fd === 2);
@@ -211,6 +211,12 @@ async function runPipeline(commands: CommandToExecute[]) {
         } else {
           stderr.write(event.data);
         }
+      }
+      if ("close" in stdout) {
+        stdout.close();
+      }
+      if ("close" in stderr) {
+        stderr.close();
       }
     })();
   });
