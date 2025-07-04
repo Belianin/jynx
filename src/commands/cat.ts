@@ -4,6 +4,7 @@ import { ShellCommand } from "../shell/types";
 
 export const cat = (filename: string) => {
   const file = disk.find(filename);
+  if (!file) throw new Error(`File ${filename} not found`);
   if ("content" in file) return file.content;
 
   throw new Error(`${filename} is not a file`);

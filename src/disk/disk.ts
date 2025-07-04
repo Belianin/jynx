@@ -13,7 +13,7 @@ export class Disk {
     name: "",
   };
 
-  find = (path: string): DiskNode => {
+  find = (path: string): DiskNode | null => {
     let current = this.root as FolderLikeNode;
     if (path === "/") return current;
     const parts = path.split("/").splice(1);
@@ -34,7 +34,7 @@ export class Disk {
     );
     if (result) return result;
 
-    throw new Error("File not found");
+    return null;
   };
 
   // todo remove
@@ -113,7 +113,7 @@ export class Disk {
     current.children.push(file);
   };
 
-  makeFile = (path: string, content: string) => {
+  makeFile = (path: string, content: string): FileNode => {
     let current = this.root as FolderLikeNode;
     const parts = path.split("/");
     for (let i = 0; i < parts.length - 1; i++) {
@@ -143,6 +143,8 @@ export class Disk {
       name: parts[parts.length - 1],
     };
     current.children.push(file);
+
+    return file;
   };
 }
 

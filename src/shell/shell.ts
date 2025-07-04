@@ -129,15 +129,26 @@ async function runPipeline(commands: CommandToExecute[]) {
   console.log(commands);
   const streams = commands.map(() => createStream());
 
-  // Вспомогательная функция для создания WritableStreamLike
-  // Например, редирект в файл — здесь просто вывод с префиксом (замени под себя)
-  function createWriteStream(target: string): {
+  function createWriteStream(
+    target: string,
+    append: boolean
+  ): {
     write: (data: string) => void;
     close: () => void;
   } {
+    const path = target.startsWith("/") ? target : `${CURRENT_DIR}/${target}`;
+    let file = disk.find(path);
+    if (!file) {
+      file = disk.makeFile(path, "");
+    }
+    if (!("content" in file)) {
+      throw new Error(`${file} is not a file`);
+    }
+
     return {
       write(data: string) {
-        print(`[Redirect to ${target}]: ${data}`);
+        if (append) file.content += data;
+        else file.content = data;
       },
       close: () => {},
     };
@@ -157,7 +168,10 @@ async function runPipeline(commands: CommandToExecute[]) {
     // Определим stdout
     if (stdoutRedirect) {
       // Пример простой обработки '>' и '>>', без реального файла — нужно заменить под задачу
-      stdout = createWriteStream(stdoutRedirect.target);
+      stdout = createWriteStream(
+        stdoutRedirect.target,
+        stdoutRedirect.type === ">>"
+      );
     } else if (i < commands.length - 1) {
       // Не последняя команда — stdout в pipe
       stdout = streams[i];
@@ -174,7 +188,10 @@ async function runPipeline(commands: CommandToExecute[]) {
         // stderr перенаправляем в stdout
         stderrToStdout = true;
       } else {
-        stderr = createWriteStream(stderrRedirect.target);
+        stderr = createWriteStream(
+          stderrRedirect.target,
+          stderrRedirect.type === ">>"
+        ); // >> так ли это?
       }
     }
 
