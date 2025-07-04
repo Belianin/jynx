@@ -14,9 +14,15 @@ import { typeCommand } from "../commands/type";
 import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
 import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
-import { CommandToken, shellParse } from "./parsing";
+import { CommandToken, parseArgs, shellParse } from "./parsing";
 import { PrintableText, print } from "./print";
-import { ShellCommand, Stream, StreamEvent, WritableStreamLike } from "./types";
+import {
+  ShellCommand,
+  ShellContext,
+  Stream,
+  StreamEvent,
+  WritableStreamLike,
+} from "./types";
 
 export const getPrefix = (): PrintableText[] => {
   return [
@@ -215,7 +221,12 @@ async function runPipeline(commands: CommandToExecute[]) {
     }
 
     return (async () => {
-      const gen = command(stdin, args);
+      const context: ShellContext = {
+        isStdoutToConsole: !!stdoutRedirect,
+        disk,
+        parseArgs,
+      };
+      const gen = command(stdin, args, context);
       for await (const event of gen) {
         if (event.type === "stdout") {
           stdout.write(event.data);
