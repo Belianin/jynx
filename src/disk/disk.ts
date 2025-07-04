@@ -158,20 +158,3 @@ function getPath(node: DiskNode) {
 
   return parts.reverse().join("/");
 }
-
-// export const treeCommand: ShellCommand = (args) => {
-//   let result = "/";
-
-//   function add(node: DiskNode, intendation: number) {
-//     result += "\t".repeat(intendation) + node.name + "\n";
-//     if ("children" in node) {
-//       for (let child of node.children) {
-//         add(child, intendation + 1);
-//       }
-//     }
-//   }
-
-//   add(root, 0);
-
-//   return result;
-// };

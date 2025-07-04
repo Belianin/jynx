@@ -10,6 +10,7 @@ export const cat = (filename: string) => {
 };
 
 export const catCommand: ShellCommand = async function* (stdin, args) {
+  if (args.length === 0) return 0;
   const destination = args[0].startsWith("/")
     ? args[0]
     : CURRENT_DIR + "/" + args[0];
