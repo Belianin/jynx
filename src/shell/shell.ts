@@ -196,19 +196,25 @@ async function runPipeline(commands: CommandToExecute[]) {
         ...variables,
         PWD: CURRENT_DIR,
       };
+
+      const getPathTo = (path: string) =>
+        path.startsWith("/") ? path : variables["PWD"] + "/" + path;
+
       const context: ShellContext = {
         isStdoutToConsole: !!stdoutRedirect,
-        disk,
+        fs: {
+          open: (path: string) => disk.find(getPathTo(path)),
+          remove: (path: string) => disk.remove(getPathTo(path)),
+          createDirectory: (path: string) =>
+            disk.makeDirectory(getPathTo(path)),
+          createFile: (path: string) => disk.makeFile(getPathTo(path)),
+        },
         parseArgs,
         std: {
           out,
           err,
         },
-        variables,
-        open: (path: string) => {
-          path = path.startsWith("/") ? path : variables["PWD"] + "/" + path;
-          return disk.find(path);
-        },
+        variables: procVariables,
         changeDirectory: (path: string) => changeCurrentDir(path),
       };
       const gen = command(stdin, args, context);
@@ -288,13 +294,14 @@ function readEnvFile() {
 }
 
 const variables: Record<string, string> = readEnvFile();
+console.log(variables);
 
 function getPathCommands() {
   const commands: Record<string, ShellCommand> = {};
   const pathValue = variables["PATH"];
   if (!pathValue) return commands;
   const paths = pathValue.split(";").filter((x) => x.trim() !== "");
-
+  console.log(paths);
   for (let path of paths) {
     const dir = disk.findDirectory(path);
     for (let node of dir.children) {
@@ -308,3 +315,5 @@ function getPathCommands() {
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
+
+console.log(disk);

@@ -92,9 +92,9 @@ export class Disk {
         current = newFolder;
         lastCreated = newFolder;
       }
-
-      return lastCreated;
     }
+
+    return lastCreated;
   };
 
   // todo copyaster

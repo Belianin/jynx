@@ -1,5 +1,4 @@
-import { Disk } from "../disk/disk";
-import { DiskNode } from "../disk/types";
+import { DiskNode, FileNode, FolderNode } from "../disk/types";
 import { ParsedArgs } from "./parsing";
 
 export type StreamEvent = {
@@ -23,14 +22,18 @@ export interface Stream extends AsyncIterable<string>, WritableStreamLike {
 }
 
 export type ShellContext = {
-  disk: Disk;
+  fs: {
+    open: (path: string) => DiskNode | undefined;
+    remove: (path: string) => void;
+    createFile: (path: string) => FileNode | undefined;
+    createDirectory: (path: string) => FolderNode | undefined;
+  };
   isStdoutToConsole: boolean;
   parseArgs: (args: string[]) => ParsedArgs;
   std: {
     out: (text: string) => StreamEvent;
     err: (text: string) => StreamEvent;
   };
-  open: (path: string) => DiskNode | undefined;
   variables: Record<string, string>;
   changeDirectory: (path: string) => void;
 };
