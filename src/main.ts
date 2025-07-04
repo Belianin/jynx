@@ -7,8 +7,8 @@ export const consoleElement = document.getElementById(
 
 let onKey: (e: KeyboardEvent) => void = () => {};
 consoleElement.addEventListener("keydown", (e) => {
-  onKey(e);
   e.preventDefault();
+  onKey(e);
 });
 
 consoleElement.addEventListener("click", () => consoleElement.focus());

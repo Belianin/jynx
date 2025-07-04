@@ -66,7 +66,7 @@ function createStream(): Stream {
   return stream;
 }
 
-type KeyHandler = (e: KeyboardEvent) => void;
+export type KeyHandler = (e: KeyboardEvent) => void;
 
 class ShellInput {
   editable: HTMLSpanElement;
@@ -74,15 +74,16 @@ class ShellInput {
   inputElement: HTMLSpanElement;
 
   parent: HTMLElement;
+  prefix: HTMLSpanElement;
 
   constructor(parent: HTMLElement) {
     this.parent = parent;
     this.inputElement = document.createElement("span");
 
-    const prefix = document.createElement("span");
+    this.prefix = document.createElement("span");
     for (let prefixPart of getPrefix())
-      prefix.appendChild(createTextElement(prefixPart));
-    this.inputElement.appendChild(prefix);
+      this.prefix.appendChild(createTextElement(prefixPart));
+    this.inputElement.appendChild(this.prefix);
     this.editable = document.createElement("span");
     this.inputElement.appendChild(this.editable);
 
@@ -99,6 +100,10 @@ class ShellInput {
   }
 
   show() {
+    // todo какой-то полукостыль
+    this.prefix.textContent = "";
+    for (let prefixPart of getPrefix())
+      this.prefix.appendChild(createTextElement(prefixPart));
     this.inputElement.style.visibility = "visible";
   }
   render(text: string, cursorPosition: number) {
@@ -165,7 +170,7 @@ export class Shell {
         this.resolveСlosedTermialPromise = () => {};
         parent.textContent = ""; // todo copypaste
         parent.appendChild(inputElement.inputElement);
-        inputElement.show();
+        inputElement.show.bind(inputElement)();
       },
       getBuffer() {
         return this.buffer;
@@ -181,13 +186,17 @@ export class Shell {
         if (!this.closedTermialPromise) throw new Error("Terminal not binded");
         return this.closedTermialPromise;
       },
+      clear() {
+        parent.textContent = "";
+        parent.appendChild(inputElement.inputElement);
+        this.buffer = "";
+      },
     } as Terminal & TerminalState;
   }
 
   bindTerminal() {
     if (this.terminal.isOpen) return;
-    this.parent.textContent = "";
-    this.parent.appendChild(this.input.inputElement);
+    this.terminal.clear(); // todo не уверен что всегда нужно
     this.input.hide();
     this.terminal.isOpen = true;
     this.terminal.buffer = "";
@@ -259,7 +268,7 @@ export class Shell {
     } else printPart(value);
   }
 
-  onKey(e: KeyboardEvent) {
+  async onKey(e: KeyboardEvent) {
     if (this.terminal.isOpen) {
       this.terminal.onKeyCallback(e);
       e.preventDefault();
@@ -305,19 +314,18 @@ export class Shell {
       this.inputText = this.getHistoryCommand(-1);
       this.cursorPos = this.inputText.length;
     } else if (e.key === "Enter") {
-      // this.input.hide();
+      this.input.hide();
 
       this.print(getPrefix());
       this.print(this.inputText + "\n");
 
-      this.execute(this.inputText);
       this.historyCounter = -1;
       this.history.push(this.inputText);
+      const command = this.inputText;
       this.inputText = "";
       this.cursorPos = 0;
 
-      // inputElement.parentNode?.removeChild(inputElement);
-      // this.input.show();
+      this.execute(command).then(this.input.show.bind(this.input));
     }
     this._render();
   }

@@ -20,7 +20,7 @@ export const editCommand: ShellCommand = async function* (
 
   terminal.onKey((x) => {
     if (x.key === "Escape") {
-      if (!file) file = createFile(args[0]);
+      if (!file && args.length > 0) file = createFile(args[0]);
       if (file) file.content = terminal.getBuffer();
       terminal.close();
     } else if (x.key === "Enter") terminal.write("\n");

@@ -1,6 +1,7 @@
 import { DiskNode, FileNode, FolderNode } from "../disk/types";
 import { ParsedArgs } from "./parsing";
 import { Color } from "./print";
+import { KeyHandler } from "./shell";
 
 export type StreamEvent = {
   type: "stdout" | "stderr";
@@ -26,8 +27,9 @@ export type Terminal = {
   getBuffer: () => string;
   write: (value: string) => void;
   close: () => void;
-  onKey: (callback: (e: KeyboardEvent) => void) => void;
+  onKey: (callback: KeyHandler) => void;
   closed: () => Promise<void>;
+  clear: () => void;
 };
 
 export type ShellContext = {
