@@ -194,7 +194,7 @@ async function runPipeline(commands: CommandToExecute[]) {
       };
 
       const getPathTo = (path: string) =>
-        path.startsWith("/") ? path : variables["PWD"] + "/" + path;
+        path.startsWith("/") ? path : procVariables["PWD"] + "/" + path;
 
       const context: ShellContext = {
         isStdoutToConsole: !stdoutRedirect,
