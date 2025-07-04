@@ -26,7 +26,7 @@ export type Terminal = {
   getBuffer: () => string;
   write: (value: string) => void;
   close: () => void;
-  onKey: (callback: (key: string) => void) => void;
+  onKey: (callback: (e: KeyboardEvent) => void) => void;
   closed: () => Promise<void>;
 };
 

@@ -24,7 +24,7 @@ export const copyCommand: ShellCommand = async function* (stdin, args, { fs }) {
 
         return 1;
       }
-      const copy = { ...node };
+      const copy = { ...node, created: new Date() };
       copy.parent = targetNode;
       targetNode.children.push(copy);
     } else {
@@ -39,7 +39,7 @@ export const copyCommand: ShellCommand = async function* (stdin, args, { fs }) {
 
         return 1;
       }
-      const copy = { ...node, name };
+      const copy = { ...node, name, created: new Date() };
       copy.parent = targetNode;
       targetNode.children.push(copy);
     }

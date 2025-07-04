@@ -95,11 +95,11 @@ class ShellInput {
   }
 
   hide() {
-    this.inputElement.hidden = true;
+    this.inputElement.style.visibility = "hidden";
   }
 
   show() {
-    this.inputElement.hidden = false;
+    this.inputElement.style.visibility = "visible";
   }
   render(text: string, cursorPosition: number) {
     this.editable.innerHTML = "";
@@ -129,6 +129,8 @@ export class Shell {
 
   fs: Disk;
 
+  terminal: Terminal & TerminalState;
+
   constructor(
     parent: HTMLDivElement,
     onKey: (callback: KeyHandler) => void,
@@ -144,6 +146,55 @@ export class Shell {
 
     this.variables = {};
     this.fs = fs;
+
+    const print = this.print.bind(this);
+    const inputElement = this.input;
+    this.terminal = {
+      isOpen: false,
+      buffer: "",
+      onKeyCallback: () => {},
+      closedTermialPromise: null,
+      resolveСlosedTermialPromise: () => {},
+
+      close() {
+        if (!this.isOpen) return;
+        this.isOpen = false;
+        this.buffer = "";
+        this.onKeyCallback = () => {};
+        this.resolveСlosedTermialPromise();
+        this.resolveСlosedTermialPromise = () => {};
+        parent.textContent = ""; // todo copypaste
+        parent.appendChild(inputElement.inputElement);
+        inputElement.show();
+      },
+      getBuffer() {
+        return this.buffer;
+      },
+      write(value: string) {
+        print(value);
+        this.buffer += value;
+      },
+      onKey(callback) {
+        this.onKeyCallback = callback;
+      },
+      closed() {
+        if (!this.closedTermialPromise) throw new Error("Terminal not binded");
+        return this.closedTermialPromise;
+      },
+    } as Terminal & TerminalState;
+  }
+
+  bindTerminal() {
+    if (this.terminal.isOpen) return;
+    this.parent.textContent = "";
+    this.parent.appendChild(this.input.inputElement);
+    this.input.hide();
+    this.terminal.isOpen = true;
+    this.terminal.buffer = "";
+    this.terminal.closedTermialPromise = new Promise<void>(
+      (res) => (this.terminal.resolveСlosedTermialPromise = res)
+    );
+    return this.terminal;
   }
 
   run() {
@@ -209,6 +260,12 @@ export class Shell {
   }
 
   onKey(e: KeyboardEvent) {
+    if (this.terminal.isOpen) {
+      this.terminal.onKeyCallback(e);
+      e.preventDefault();
+      return;
+    }
+
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       this.inputText =
         this.inputText.slice(0, this.cursorPos) +
@@ -248,7 +305,7 @@ export class Shell {
       this.inputText = this.getHistoryCommand(-1);
       this.cursorPos = this.inputText.length;
     } else if (e.key === "Enter") {
-      this.input.hide();
+      // this.input.hide();
 
       this.print(getPrefix());
       this.print(this.inputText + "\n");
@@ -260,7 +317,7 @@ export class Shell {
       this.cursorPos = 0;
 
       // inputElement.parentNode?.removeChild(inputElement);
-      this.input.show();
+      // this.input.show();
     }
     this._render();
   }
@@ -297,46 +354,6 @@ export class Shell {
   }
 
   async runPipeline(commands: CommandToExecute[]) {
-    let isTerminalOpen = false;
-    let terminalBuffer = "";
-    let onKeyCallback: null | ((value: string) => void) = null;
-    let closedTermialPromise: Promise<void> | null = null;
-    let resolveСlosedTermialPromise: () => void = () => {};
-
-    const print = this.print;
-    const terminal: Terminal = {
-      close() {
-        isTerminalOpen = false;
-        terminalBuffer = "";
-        onKeyCallback = null;
-        resolveСlosedTermialPromise();
-        resolveСlosedTermialPromise = () => {};
-      },
-      getBuffer() {
-        return terminalBuffer;
-      },
-      write(value: string) {
-        print(value);
-        terminalBuffer += value;
-      },
-      onKey(callback) {
-        onKeyCallback = callback;
-      },
-      closed() {
-        if (!closedTermialPromise) throw new Error("Terminal not binded");
-        return closedTermialPromise;
-      },
-    };
-
-    const bindTerminal = () => {
-      isTerminalOpen = true;
-      terminalBuffer = "";
-      closedTermialPromise = new Promise<void>(
-        (res) => (resolveСlosedTermialPromise = res)
-      );
-      return terminal;
-    };
-
     const streams = commands.map(() => createStream());
 
     const createWriteStream = (
@@ -462,11 +479,7 @@ export class Shell {
             makeSysFile: (path: string, command: ShellCommand) =>
               this.fs.makeSysFile(getPathTo(path), command),
           },
-          tryBindTerminal: () => {
-            if (isTerminalOpen) return;
-
-            return bindTerminal();
-          },
+          tryBindTerminal: this.bindTerminal.bind(this),
           parseArgs,
           std: {
             out,
@@ -493,7 +506,7 @@ export class Shell {
     });
 
     await Promise.all(processes);
-    terminal.close();
+    this.terminal.close();
   }
 }
 
@@ -524,3 +537,11 @@ export const handleError = (e: any) => {
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
+
+type TerminalState = {
+  isOpen: boolean;
+  buffer: string;
+  onKeyCallback: (e: KeyboardEvent) => void;
+  closedTermialPromise: Promise<void> | null;
+  resolveСlosedTermialPromise: () => void;
+};
