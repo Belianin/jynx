@@ -2,6 +2,7 @@ import { isFile, isFolder } from "../disk/types";
 import { handleError } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
+const fileColor = "yellow";
 export const listDirectoryCommand: ShellCommand = async function* (
   stdin,
   args,
@@ -9,11 +10,14 @@ export const listDirectoryCommand: ShellCommand = async function* (
     parseArgs,
     std: { out },
     fs: { open },
-    variables: { PWD },
+    variables: { PWD, col },
     isStdoutToConsole,
+    color,
   }
 ) {
   const { flags, positional } = parseArgs(args);
+  const isColored =
+    flags["color"] !== "false" && (isStdoutToConsole || flags["color"]);
   try {
     const path = positional[0] || PWD;
     const folder = open(path);
@@ -61,12 +65,8 @@ export const listDirectoryCommand: ShellCommand = async function* (
         const line = row
           .map((val, i) => {
             const padded = i !== 0 ? val.padStart(colWidths[i] + 1) : val;
-            if (
-              isStdoutToConsole &&
-              items[j].type === "-" &&
-              i === row.length - 1
-            )
-              return `\x1b[33m${padded}\x1b[0m`; // todo style
+            if (isColored && items[j].type === "-" && i === row.length - 1)
+              return color[fileColor](padded);
             return padded;
           })
           .join("");
@@ -78,8 +78,7 @@ export const listDirectoryCommand: ShellCommand = async function* (
       yield out(
         items
           .map((x) => {
-            if (x.type === "-" && isStdoutToConsole)
-              return `\x1b[33m${x.name}\x1b[0m`;
+            if (x.type === "-" && isColored) return color[fileColor](x.name);
             return x.name;
           })
           .join("\t")

@@ -52,7 +52,14 @@ const colorMap: Record<string, Color> = {
   "35": "magenta",
   "36": "cyan",
   "37": "white",
-};
+} as const;
+
+export const colorToConvert: Record<Color, (text: string) => string> =
+  {} as any; // todo
+
+for (let [number, color] of Object.entries(colorMap)) {
+  colorToConvert[color] = (text: string) => `\x1b[${number}m${text}\x1b[0m`;
+}
 
 export const parseColorText = (text: string): PrintableText[] => {
   const regex = /\x1b\[(\d+)m/g;

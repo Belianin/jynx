@@ -15,7 +15,7 @@ import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
 import { changeCurrentDir, CURRENT_DIR, DOMAIN, USERNAME } from "./env";
 import { CommandToken, parseArgs, shellParse } from "./parsing";
-import { parseColorText, print, PrintableText } from "./print";
+import { colorToConvert, parseColorText, print, PrintableText } from "./print";
 import {
   ShellCommand,
   ShellContext,
@@ -197,7 +197,8 @@ async function runPipeline(commands: CommandToExecute[]) {
         path.startsWith("/") ? path : procVariables["PWD"] + "/" + path;
 
       const context: ShellContext = {
-        isStdoutToConsole: !stdoutRedirect,
+        color: colorToConvert,
+        isStdoutToConsole: !stdoutRedirect && i === commands.length - 1,
         fs: {
           open: (path: string) => disk.find(getPathTo(path)),
           remove: (path: string) => disk.remove(getPathTo(path)),

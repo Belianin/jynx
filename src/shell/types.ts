@@ -1,5 +1,6 @@
 import { DiskNode, FileNode, FolderNode } from "../disk/types";
 import { ParsedArgs } from "./parsing";
+import { Color } from "./print";
 
 export type StreamEvent = {
   type: "stdout" | "stderr";
@@ -34,6 +35,7 @@ export type ShellContext = {
     out: (text: string) => StreamEvent;
     err: (text: string) => StreamEvent;
   };
+  color: Record<Color, (text: string) => string>;
   variables: Record<string, string>;
   changeDirectory: (path: string) => void;
 };
