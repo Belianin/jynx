@@ -5,6 +5,7 @@ import { envCommand } from "../commands/env";
 import { grepCommand } from "../commands/grep";
 import { listDirectoryCommand } from "../commands/ls";
 import { makeDirectoryCommand } from "../commands/mkdir";
+import { removeFile } from "../commands/rm";
 import { treeCommand } from "../commands/tree";
 import { typeCommand } from "../commands/type";
 import { disk } from "../disk/disk";
@@ -109,6 +110,7 @@ function getPathCommands() {
 
 function getEnvPaths() {
   const envFile = disk.find(envPath) as FileNode;
+  if (!envFile) return [];
   var envs = envFile.content.split("\n");
 
   for (let envRecord of envs) {
@@ -244,6 +246,7 @@ const commandToRegister: Record<string, ShellCommand> = {
   tree: treeCommand,
   cd: changeDirectoryCommand,
   type: typeCommand,
+  rm: removeFile,
 };
 for (let [name, command] of Object.entries(commandToRegister)) {
   disk.makeSysFile(`${sysProgramsPath}/${name}`, command);

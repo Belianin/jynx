@@ -56,6 +56,12 @@ export class Disk {
     return current;
   };
 
+  remove = (path: string) => {
+    const file = this.find(path);
+    if (file && "parent" in file)
+      file.parent.children = file.parent.children.filter((x) => x !== file);
+  };
+
   makeDirectory = (path: string) => {
     let current = this.root as FolderLikeNode;
     for (let folder of path.split("/")) {
