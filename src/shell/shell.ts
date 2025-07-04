@@ -1,10 +1,12 @@
 import { catCommand } from "../commands/cat";
+import { changeDirectoryCommand } from "../commands/cd";
 import { echoCommand } from "../commands/echo";
 import { envCommand } from "../commands/env";
 import { grepCommand } from "../commands/grep";
 import { listDirectoryCommand } from "../commands/ls";
 import { makeDirectoryCommand } from "../commands/mkdir";
 import { treeCommand } from "../commands/tree";
+import { typeCommand } from "../commands/type";
 import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
 import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
@@ -22,7 +24,7 @@ export const getPrefix = (): PrintableText[] => {
       value: ":",
     },
     {
-      value: CURRENT_DIR + " ",
+      value: (CURRENT_DIR === "" ? "/" : CURRENT_DIR) + " ",
       color: "yellow",
     },
   ];
@@ -240,6 +242,8 @@ const commandToRegister: Record<string, ShellCommand> = {
   ls: listDirectoryCommand,
   env: envCommand,
   tree: treeCommand,
+  cd: changeDirectoryCommand,
+  type: typeCommand,
 };
 for (let [name, command] of Object.entries(commandToRegister)) {
   disk.makeSysFile(`${sysProgramsPath}/${name}`, command);

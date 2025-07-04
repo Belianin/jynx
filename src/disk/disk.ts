@@ -24,9 +24,9 @@ export class Disk {
         if ("children" in next) {
           current = next;
         } else {
-          throw new Error(`${getPath(next)} is a file`);
+          throw new Error(`${this.getPath(next)} is a file`);
         }
-      } else throw new Error(`${getPath(current)}/${part} not extists`);
+      } else throw new Error(`${this.getPath(current)}/${part} not extists`);
     }
 
     const result = current.children.find(
@@ -48,9 +48,9 @@ export class Disk {
         if ("children" in next) {
           current = next;
         } else {
-          throw new Error(`${getPath(next)} is a file`);
+          throw new Error(`${this.getPath(next)} is a file`);
         }
-      } else throw new Error(`${getPath(current)}/${folder} not extists`);
+      } else throw new Error(`${this.getPath(current)}/${folder} not extists`);
     }
 
     return current;
@@ -66,7 +66,7 @@ export class Disk {
         if ("children" in next) {
           current = next;
         } else {
-          throw new Error(`${getPath(next)} is a file`);
+          throw new Error(`${this.getPath(next)} is a file`);
         }
       } else {
         const newFolder = {
@@ -146,17 +146,17 @@ export class Disk {
 
     return file;
   };
+
+  getPath(node: DiskNode) {
+    const parts: string[] = [];
+    parts.push(node.name);
+    while ("parent" in node) {
+      node = node.parent;
+      parts.push(node.name);
+    }
+
+    return parts.reverse().join("/");
+  }
 }
 
 export const disk = new Disk();
-
-function getPath(node: DiskNode) {
-  const parts: string[] = [];
-  parts.push(node.name);
-  while ("parent" in node) {
-    node = node.parent;
-    parts.push(node.name);
-  }
-
-  return parts.reverse().join("/");
-}

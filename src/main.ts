@@ -8,34 +8,67 @@ let inputText = "";
 let cursorPos = 0;
 
 // Добавляем курсор
-export const inputElement = document.createElement("span");
+let editable: HTMLSpanElement;
+let cursor: HTMLSpanElement;
+export let inputElement: HTMLSpanElement;
+
 export function scrollToBottom() {
   inputElement.scrollIntoView(false);
 }
 
-const path = document.createElement("span");
-for (let prefixPart of getPrefix())
-  path.appendChild(createTextElement(prefixPart));
-// const user = document.createElement("span");
-// user.style.color = "#00ff00";
-// user.innerHTML = "guest@belyanin.zip";
-// path.appendChild(user);
-// const double = document.createTextNode(":");
-// path.appendChild(double);
-// const pathReal = document.createElement("span");
-// pathReal.style.color = "#0000FF";
-// pathReal.innerHTML = "/root/std ";
-// path.appendChild(pathReal);
-inputElement.appendChild(path);
-const editable = document.createElement("span");
-inputElement.appendChild(editable);
+createInputElement();
 
-const cursor = document.createElement("span");
-cursor.classList.add("cursor");
-cursor.textContent = "█";
+// const path = document.createElement("span");
+// for (let prefixPart of getPrefix())
+//   path.appendChild(createTextElement(prefixPart));
+// // const user = document.createElement("span");
+// // user.style.color = "#00ff00";
+// // user.innerHTML = "guest@belyanin.zip";
+// // path.appendChild(user);
+// // const double = document.createTextNode(":");
+// // path.appendChild(double);
+// // const pathReal = document.createElement("span");
+// // pathReal.style.color = "#0000FF";
+// // pathReal.innerHTML = "/root/std ";
+// // path.appendChild(pathReal);
+// inputElement.appendChild(path);
+// const editable = document.createElement("span");
+// inputElement.appendChild(editable);
 
-inputElement.appendChild(cursor);
-consoleElement.appendChild(inputElement);
+// const cursor = document.createElement("span");
+// cursor.classList.add("cursor");
+// cursor.textContent = "█";
+
+// inputElement.appendChild(cursor);
+// consoleElement.appendChild(inputElement);
+
+function createInputElement() {
+  inputElement = document.createElement("span");
+
+  const path = document.createElement("span");
+  for (let prefixPart of getPrefix())
+    path.appendChild(createTextElement(prefixPart));
+  // const user = document.createElement("span");
+  // user.style.color = "#00ff00";
+  // user.innerHTML = "guest@belyanin.zip";
+  // path.appendChild(user);
+  // const double = document.createTextNode(":");
+  // path.appendChild(double);
+  // const pathReal = document.createElement("span");
+  // pathReal.style.color = "#0000FF";
+  // pathReal.innerHTML = "/root/std ";
+  // path.appendChild(pathReal);
+  inputElement.appendChild(path);
+  editable = document.createElement("span");
+  inputElement.appendChild(editable);
+
+  cursor = document.createElement("span");
+  cursor.classList.add("cursor");
+  cursor.textContent = "█";
+
+  inputElement.appendChild(cursor);
+  consoleElement.appendChild(inputElement);
+}
 
 function render() {
   editable.innerHTML = "";
@@ -116,14 +149,21 @@ consoleElement.addEventListener("keydown", (e) => {
     render();
     e.preventDefault();
   } else if (e.key === "Enter") {
+    inputElement.hidden = true;
+
     print(getPrefix());
     print(inputText + "\n");
+
     execute(inputText);
     historyCounter = -1;
     history.push(inputText);
     inputText = "";
     cursorPos = 0;
+
+    inputElement.parentNode?.removeChild(inputElement);
+    createInputElement();
     render();
+
     e.preventDefault();
   }
 });

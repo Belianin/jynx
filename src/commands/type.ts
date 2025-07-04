@@ -1,5 +1,6 @@
 import { consoleElement, inputElement, scrollToBottom } from "../main";
 import { PrintableText, defaultColor } from "../shell/print";
+import { ShellCommand } from "../shell/types";
 
 const defaultTimeout = 30;
 
@@ -46,7 +47,8 @@ const print = (text: PrintableText, timeout: number): Promise<void> => {
   return promise;
 };
 
-export const typeCommand = (args: string[]): string => {
-  type(args[0], args.length > 1 ? parseInt(args[1]) : undefined);
-  return "";
+export const typeCommand: ShellCommand = async function* (stdin, args) {
+  type(args[0] + "\n", args.length > 1 ? parseInt(args[1]) : undefined);
+
+  return 0;
 };
