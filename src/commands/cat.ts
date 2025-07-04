@@ -1,4 +1,5 @@
 import { disk } from "../disk/disk";
+import { isFile } from "../disk/types";
 import { CURRENT_DIR } from "../shell/env";
 import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
@@ -6,7 +7,7 @@ import { ShellCommand } from "../shell/types";
 export const cat = (filename: string) => {
   const file = disk.find(filename);
   if (!file) throw new Error(`File ${filename} not found`);
-  if ("content" in file) return file.content;
+  if (isFile(file)) return file.content;
 
   throw new Error(`${filename} is not a file`);
 };

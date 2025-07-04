@@ -3,6 +3,8 @@ import {
   DiskNode,
   FileNode,
   FolderLikeNode,
+  FolderNode,
+  isFolderLike,
   ProgramFileNode,
   RootNode,
 } from "./types";
@@ -11,6 +13,11 @@ export class Disk {
   root: RootNode = {
     children: [],
     name: "",
+    permissions: "rw-rw-rw-",
+    type: "r",
+    created: new Date(),
+    owner: "guest",
+    ownerGroup: "guest",
   };
 
   find = (path: string): DiskNode | null => {
@@ -21,7 +28,7 @@ export class Disk {
       const part = parts[i];
       const next = current.children.find((x) => x.name === part);
       if (next) {
-        if ("children" in next) {
+        if (isFolderLike(next)) {
           current = next;
         } else {
           throw new Error(`${this.getPath(next)} is a file`);
@@ -45,7 +52,7 @@ export class Disk {
       if (folder === "") continue;
       const next = current.children.find((x) => x.name === folder);
       if (next) {
-        if ("children" in next) {
+        if (isFolderLike(next)) {
           current = next;
         } else {
           throw new Error(`${this.getPath(next)} is a file`);
@@ -69,16 +76,21 @@ export class Disk {
 
       const next = current.children.find((x) => x.name === folder);
       if (next) {
-        if ("children" in next) {
+        if (isFolderLike(next)) {
           current = next;
         } else {
           throw new Error(`${this.getPath(next)} is a file`);
         }
       } else {
-        const newFolder = {
+        const newFolder: FolderNode = {
           parent: current,
           children: [],
           name: folder,
+          permissions: "rw-r--r--",
+          type: "d",
+          created: new Date(),
+          owner: "guest",
+          ownerGroup: "guest",
         };
         current.children.push(newFolder);
         current = newFolder;
@@ -96,16 +108,21 @@ export class Disk {
 
       const next = current.children.find((x) => x.name === folder);
       if (next) {
-        if ("children" in next) {
+        if (isFolderLike(next)) {
           current = next;
         } else {
           throw new Error("There is alread a file in a path");
         }
       } else {
-        const newFolder = {
+        const newFolder: FolderNode = {
           parent: current,
           children: [],
           name: folder,
+          permissions: "rw-r--r--",
+          type: "d",
+          created: new Date(),
+          owner: "guest",
+          ownerGroup: "guest",
         };
         current.children.push(newFolder);
         current = newFolder;
@@ -115,6 +132,11 @@ export class Disk {
       parent: current,
       command,
       name: parts[parts.length - 1],
+      permissions: "rw-r--r--",
+      type: "x",
+      created: new Date(),
+      owner: "guest",
+      ownerGroup: "guest",
     };
     current.children.push(file);
   };
@@ -134,10 +156,15 @@ export class Disk {
           throw new Error("There is alread a file in a path");
         }
       } else {
-        const newFolder = {
+        const newFolder: FolderNode = {
           parent: current,
           children: [],
           name: folder,
+          permissions: "rw-r--r--",
+          type: "d",
+          created: new Date(),
+          owner: "guest",
+          ownerGroup: "guest",
         };
         current.children.push(newFolder);
         current = newFolder;
@@ -147,6 +174,11 @@ export class Disk {
       parent: current,
       content,
       name: parts[parts.length - 1],
+      permissions: "rw-r--r--",
+      type: "-",
+      created: new Date(),
+      owner: "guest",
+      ownerGroup: "guest",
     };
     current.children.push(file);
 

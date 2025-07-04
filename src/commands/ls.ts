@@ -1,4 +1,5 @@
 import { disk } from "../disk/disk";
+import { isFile } from "../disk/types";
 import { CURRENT_DIR } from "../shell/env";
 import { handleError, out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
@@ -26,15 +27,13 @@ export const listDirectoryCommand: ShellCommand = async function* (
 
       // let maxSizeSize = 0
       for (let item of items) {
-        const isDir = "children" in item;
-        const type = isDir ? "d" : "-";
         const row: string[] = [
-          `${type}rw-r--r--`,
+          `${item.type}${item.permissions}`,
           "0",
-          "guest",
-          "guest",
-          "0",
-          "some-date",
+          item.owner,
+          item.ownerGroup,
+          isFile(item) ? item.content.length.toString() : "0",
+          formatDate(item.created),
           item.name,
         ];
         for (let i = 0; i < row.length; i++) {
@@ -47,7 +46,9 @@ export const listDirectoryCommand: ShellCommand = async function* (
 
       // печатаем с выравниванием
       for (const row of rows) {
-        const line = row.map((val, i) => val.padEnd(colWidths[i] + 1)).join("");
+        const line = row
+          .map((val, i) => val.padStart(colWidths[i] + 1))
+          .join("");
         yield out(line);
       }
 
@@ -62,3 +63,35 @@ export const listDirectoryCommand: ShellCommand = async function* (
 
   return 1;
 };
+
+function formatDate(date: Date) {
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const now = new Date();
+
+  const month = months[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, " "); // пробел перед однозначным числом
+
+  // Проверка: изменён ли файл за последние 6 месяцев
+  const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
+  if (Math.abs(now.getTime() - date.getTime()) < sixMonthsMs) {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${month} ${day} ${hours}:${minutes}`;
+  } else {
+    const year = date.getFullYear();
+    return `${month} ${day}  ${year}`;
+  }
+}

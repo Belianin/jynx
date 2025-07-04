@@ -1,25 +1,46 @@
 import { ShellCommand } from "../shell/types";
 
-export type RootNode = {
+export type NodeInfo = {
+  permissions: string;
+  owner: string;
+  ownerGroup: string;
+  created: Date;
+};
+
+export type RootNode = NodeInfo & {
   name: "";
   children: NonRoot[];
+  type: "r";
 };
-export type FileNode = {
+export type FileNode = NodeInfo & {
   name: string;
   content: string;
   parent: FolderLikeNode;
+  type: "-";
 };
-export type ProgramFileNode = {
+export type ProgramFileNode = NodeInfo & {
   name: string;
   // todo content?
   command: ShellCommand;
   parent: FolderLikeNode;
+  type: "x";
 };
-export type FolderNode = {
+export type FolderNode = NodeInfo & {
   name: string;
   children: NonRoot[];
   parent: FolderLikeNode;
+  type: "d";
 };
 export type FolderLikeNode = FolderNode | RootNode;
 export type NonRoot = FolderNode | FileNode | ProgramFileNode;
 export type DiskNode = NonRoot | RootNode;
+
+export const isFile = (node: DiskNode): node is FileNode => {
+  return "content" in node;
+};
+export const isFolder = (node: DiskNode): node is FolderNode => {
+  return "parent" in node || "children" in node;
+};
+export const isFolderLike = (node: DiskNode): node is FolderLikeNode => {
+  return "children" in node;
+};

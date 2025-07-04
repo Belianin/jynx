@@ -1,5 +1,5 @@
 import { disk } from "../disk/disk";
-import { DiskNode } from "../disk/types";
+import { DiskNode, isFolderLike } from "../disk/types";
 import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
@@ -13,7 +13,7 @@ export const treeCommand: ShellCommand = async function* (stdin, args) {
     //});
     // todo many yield
     result += "\t".repeat(intendation) + node.name + "\n";
-    if ("children" in node) {
+    if (isFolderLike(node)) {
       for (let child of node.children) {
         add(child, intendation + 1);
       }
