@@ -22,6 +22,14 @@ export interface Stream extends AsyncIterable<string>, WritableStreamLike {
   close(): void;
 }
 
+export type Terminal = {
+  getBuffer: () => string;
+  write: (value: string) => void;
+  close: () => void;
+  onKey: (callback: (key: string) => void) => void;
+  closed: () => Promise<void>;
+};
+
 export type ShellContext = {
   fs: {
     open: (path: string) => DiskNode | undefined;
@@ -40,4 +48,5 @@ export type ShellContext = {
   color: Record<Color, (text: string) => string>;
   variables: Record<string, string>;
   changeDirectory: (path: string) => void;
+  tryBindTerminal: () => Terminal | undefined;
 };
