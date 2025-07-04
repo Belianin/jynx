@@ -1,3 +1,6 @@
+import { Disk } from "../disk/disk";
+import { ParsedArgs } from "./parsing";
+
 export type StreamEvent = {
   type: "stdout" | "stderr";
   data: string;
@@ -6,7 +9,8 @@ export type CommandOutput = AsyncGenerator<StreamEvent, number, void>;
 
 export type ShellCommand = (
   stdin: AsyncIterable<string>,
-  args: string[]
+  args: string[],
+  context: ShellContext
 ) => CommandOutput;
 
 export interface WritableStreamLike {
@@ -16,3 +20,9 @@ export interface WritableStreamLike {
 export interface Stream extends AsyncIterable<string>, WritableStreamLike {
   close(): void;
 }
+
+export type ShellContext = {
+  disk: Disk;
+  isStdoutToConsole: boolean;
+  parseArgs: (args: string[]) => ParsedArgs;
+};
