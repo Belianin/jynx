@@ -1,3 +1,4 @@
+import { aptCommand, defaultSources, sourcesList } from "../commands/apt";
 import { catCommand } from "../commands/cat";
 import { changeDirectoryCommand } from "../commands/cd";
 import { copyCommand } from "../commands/cp";
@@ -251,6 +252,7 @@ const commandToRegister: Record<string, ShellCommand> = {
   rm: removeFile,
   disk: diskCommand,
   cp: copyCommand,
+  apt: aptCommand,
 };
 for (let [name, command] of Object.entries(commandToRegister)) {
   disk.makeSysFile(`${sysProgramsPath}/${name}`, command);
@@ -260,6 +262,7 @@ disk.makeFile(envPath, `PATH=${sysProgramsPath};${usrProgramsPath}`);
 disk.makeDirectory(sysProgramsPath);
 disk.makeDirectory(usrProgramsPath);
 disk.makeDirectory(CURRENT_DIR);
+disk.makeFile(sourcesList, defaultSources);
 
 export const err = (data: string): StreamEvent => ({
   type: "stderr",

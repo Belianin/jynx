@@ -1,4 +1,4 @@
-export let CURRENT_DIR = "/users/guest";
+export let CURRENT_DIR = "/home/guest";
 export let USERNAME = "guest";
 export const DOMAIN = "belyanin.zip";
 
