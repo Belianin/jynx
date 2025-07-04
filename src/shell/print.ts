@@ -10,6 +10,8 @@ export const colors = [
   "yellow",
   "blue",
   "gray",
+  "orange",
+  "purple",
 ] as const;
 export type Color = (typeof colors)[number];
 export const defaultColor: Color = "white";

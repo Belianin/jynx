@@ -9,6 +9,8 @@ body {
   --var-console-color-cyan: #00ffff;
   --var-console-color-white: #ffffff;
   --var-console-color-gray: #888888;
+  --var-console-color-orange: #ffbf00;
+  --var-console-color-purple: #a020f0;
   margin: 0;
   background: #111;
   display: flex;
@@ -43,6 +45,12 @@ body {
 }
 .gray {
   color: var(--var-console-color-gray);
+}
+.orange {
+  color: var(--var-console-color-orange);
+}
+.purple {
+  color: var(--var-console-color-purple);
 }
 
 #console {

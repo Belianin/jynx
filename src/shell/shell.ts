@@ -21,14 +21,14 @@ export const getPrefix = (): PrintableText[] => {
   return [
     {
       value: `${USERNAME}@${DOMAIN}`,
-      color: "magenta",
+      color: "gray",
     },
     {
       value: ":",
     },
     {
       value: (CURRENT_DIR === "" ? "/" : CURRENT_DIR) + " ",
-      color: "yellow",
+      color: "orange",
     },
   ];
 };
@@ -151,10 +151,10 @@ async function runPipeline(commands: CommandToExecute[]) {
       throw new Error(`${file} is not a file`);
     }
 
+    if (!append) file.content = "";
     return {
       write(data: string) {
-        if (append) file.content += data;
-        else file.content = data;
+        file.content += data;
       },
       close: () => {},
     };
