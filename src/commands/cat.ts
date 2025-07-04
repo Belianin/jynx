@@ -15,6 +15,7 @@ export const catCommand: ShellCommand = async function* (stdin, args) {
   const destination = args[0].startsWith("/")
     ? args[0]
     : CURRENT_DIR + "/" + args[0];
-  yield { type: "stdout", data: cat(destination) + "\n" };
+  const data = cat(destination);
+  yield { type: "stdout", data: data.endsWith("\n") ? data : data + "\n" };
   return 0;
 };

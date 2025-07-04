@@ -1,5 +1,6 @@
 import { catCommand } from "../commands/cat";
 import { changeDirectoryCommand } from "../commands/cd";
+import { diskCommand } from "../commands/disk";
 import { echoCommand } from "../commands/echo";
 import { envCommand } from "../commands/env";
 import { grepCommand } from "../commands/grep";
@@ -247,6 +248,7 @@ const commandToRegister: Record<string, ShellCommand> = {
   cd: changeDirectoryCommand,
   type: typeCommand,
   rm: removeFile,
+  disk: diskCommand,
 };
 for (let [name, command] of Object.entries(commandToRegister)) {
   disk.makeSysFile(`${sysProgramsPath}/${name}`, command);
