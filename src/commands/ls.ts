@@ -8,25 +8,24 @@ export const listDirectoryCommand: ShellCommand = async function* (
   args,
   { parseArgs }
 ) {
-  const parsedArgs = parseArgs(args);
+  const { flags, positional } = parseArgs(args);
   try {
-    const path =
-      parsedArgs.positional.length === 0
-        ? CURRENT_DIR
-        : parsedArgs.positional[0];
+    const path = positional.length === 0 ? CURRENT_DIR : positional[0];
     let folder = path.startsWith("/")
       ? disk.findDirectory(path)
       : disk.findDirectory(CURRENT_DIR + "/" + path);
 
-    if (parsedArgs.flags["l"]) {
+    const items = folder.children.filter(
+      (x) => !x.name.startsWith(".") || flags["a"]
+    );
+
+    if (flags["l"]) {
       const colWidths = [0, 0, 0, 0, 0, 0, 0];
 
       const rows: string[][] = [];
 
       // let maxSizeSize = 0
-      for (let item of folder.children) {
-        if (parsedArgs.flags["a"] || !item.name.startsWith(".")) continue;
-
+      for (let item of items) {
         const isDir = "children" in item;
         const type = isDir ? "d" : "-";
         const row: string[] = [
@@ -54,10 +53,7 @@ export const listDirectoryCommand: ShellCommand = async function* (
 
       return 0;
     } else {
-      // todo
-      // if (parsedArgs.flags['a'] || !item.name.startsWith('.'))
-      //   continue;
-      yield out(folder.children.map((x) => x.name).join("\t"));
+      yield out(items.map((x) => x.name).join("\t"));
       return 0;
     }
   } catch (e: any) {
