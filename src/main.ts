@@ -1,3 +1,4 @@
+import { createDefaultImage } from "./disk/image";
 import { Shell } from "./shell/shell";
 
 export const consoleElement = document.getElementById(
@@ -11,4 +12,7 @@ consoleElement.addEventListener("keydown", (e) => {
 });
 
 consoleElement.addEventListener("click", () => consoleElement.focus());
-var shell = new Shell(consoleElement, (callback) => (onKey = callback));
+const fsImage = createDefaultImage();
+const disk = fsImage.createFs();
+const shell = new Shell(consoleElement, (callback) => (onKey = callback), disk);
+shell.run();

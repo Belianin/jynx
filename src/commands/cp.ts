@@ -1,9 +1,8 @@
-import { disk } from "../disk/disk";
 import { CURRENT_DIR } from "../shell/env";
 import { err, handleError } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
-export const copyCommand: ShellCommand = async function* (stdin, args) {
+export const copyCommand: ShellCommand = async function* (stdin, args, { fs }) {
   try {
     const path = args[0].startsWith("/")
       ? args[0]
@@ -12,13 +11,13 @@ export const copyCommand: ShellCommand = async function* (stdin, args) {
       ? args[1]
       : CURRENT_DIR + "/" + args[1];
 
-    const node = disk.find(path);
+    const node = fs.open(path);
     if (!node || !("parent" in node)) {
       yield err("Failed to copy");
       return 1;
     }
     if (target.endsWith("/")) {
-      const targetNode = disk.find(target.substring(0, target.length - 1));
+      const targetNode = fs.open(target.substring(0, target.length - 1));
       if (!targetNode || !("children" in targetNode)) return 1;
       if (targetNode.children.find((x) => x.name === node.name)) {
         yield err("Already exists");
@@ -32,7 +31,7 @@ export const copyCommand: ShellCommand = async function* (stdin, args) {
       const lastSlashIndex = target.lastIndexOf("/");
       let dirPath = target.substring(0, lastSlashIndex);
       if (dirPath === "") dirPath = "/";
-      const targetNode = disk.find(dirPath);
+      const targetNode = fs.open(dirPath);
       if (!targetNode || !("children" in targetNode)) return 1;
       const name = target.substring(lastSlashIndex + 1);
       if (targetNode.children.find((x) => x.name === name)) {

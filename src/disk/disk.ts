@@ -196,4 +196,4 @@ export class Disk {
   }
 }
 
-export const disk = new Disk();
+export const createDisk = () => new Disk();

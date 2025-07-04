@@ -38,6 +38,7 @@ export type ShellContext = {
     createDirectory: (path: string) => FolderNode | undefined;
     changeWorkingDirectory: (path: string) => void;
     getPathTo: (path: string) => string;
+    makeSysFile: (path: string, command: ShellCommand) => void; // todo удалить
   };
   isStdoutToConsole: boolean;
   parseArgs: (args: string[]) => ParsedArgs;

@@ -1,4 +1,3 @@
-import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
 import { err, handleError, out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
@@ -11,11 +10,11 @@ export interface CommandModule {
   manifestVersion: string;
 }
 
-export const aptCommand: ShellCommand = async function* (stdin, args) {
+export const aptCommand: ShellCommand = async function* (stdin, args, { fs }) {
   const command = args[0];
   const name = args[1];
 
-  const sourcesFile = disk.find(sourcesList) as FileNode;
+  const sourcesFile = fs.open(sourcesList) as FileNode;
   if (!sourcesFile) {
     yield err("No sources available");
     return 1;
@@ -33,7 +32,7 @@ export const aptCommand: ShellCommand = async function* (stdin, args) {
 
   try {
     const command = module.default;
-    disk.makeSysFile(`/usr/bin/${name}`, command);
+    fs.makeSysFile(`/usr/bin/${name}`, command);
     return 0;
   } catch (e: any) {
     yield handleError(e);
