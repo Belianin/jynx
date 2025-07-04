@@ -1,23 +1,16 @@
-import { disk } from "../disk/disk";
 import { isFile } from "../disk/types";
-import { CURRENT_DIR } from "../shell/env";
-import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
-export const cat = (filename: string) => {
-  const file = disk.find(filename);
-  if (!file) throw new Error(`File ${filename} not found`);
-  if (isFile(file)) return file.content;
-
-  throw new Error(`${filename} is not a file`);
-};
-
-export const catCommand: ShellCommand = async function* (stdin, args) {
+export const catCommand: ShellCommand = async function* (
+  stdin,
+  args,
+  { disk, std: { out }, open }
+) {
   if (args.length === 0) return 0;
-  const destination = args[0].startsWith("/")
-    ? args[0]
-    : CURRENT_DIR + "/" + args[0];
-  const data = cat(destination);
-  yield out(data);
+  const filename = args[0];
+  const file = open(filename);
+  if (!file) throw new Error(`File ${filename} not found`);
+  if (isFile(file)) yield out(file.content);
+  else throw new Error(`${filename} is not a file`);
   return 0;
 };

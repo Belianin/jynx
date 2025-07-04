@@ -13,9 +13,9 @@ import { treeCommand } from "../commands/tree";
 import { typeCommand } from "../commands/type";
 import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
-import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
+import { changeCurrentDir, CURRENT_DIR, DOMAIN, USERNAME } from "./env";
 import { CommandToken, parseArgs, shellParse } from "./parsing";
-import { PrintableText, print } from "./print";
+import { print, PrintableText } from "./print";
 import {
   ShellCommand,
   ShellContext,
@@ -105,35 +105,6 @@ export async function execute(text: string) {
   }
 }
 
-function getPathCommands() {
-  const commands: Record<string, ShellCommand> = {};
-  for (let path of getEnvPaths()) {
-    const dir = disk.findDirectory(path);
-    for (let node of dir.children) {
-      if ("command" in node) commands[node.name] = node.command;
-    }
-  }
-
-  return commands;
-}
-
-function getEnvPaths() {
-  const envFile = disk.find(envPath) as FileNode;
-  if (!envFile) return [];
-  var envs = envFile.content.split("\n");
-
-  for (let envRecord of envs) {
-    if (envRecord.startsWith("PATH=")) {
-      return envRecord
-        .substring(5)
-        .split(";")
-        .filter((x) => x.trim() !== "");
-    }
-  }
-
-  throw new Error("Failed to load PATH");
-}
-
 type CommandToExecute = CommandToken & {
   command: ShellCommand;
 };
@@ -221,10 +192,24 @@ async function runPipeline(commands: CommandToExecute[]) {
     }
 
     return (async () => {
+      const procVariables = {
+        ...variables,
+        PWD: CURRENT_DIR,
+      };
       const context: ShellContext = {
         isStdoutToConsole: !!stdoutRedirect,
         disk,
         parseArgs,
+        std: {
+          out,
+          err,
+        },
+        variables,
+        open: (path: string) => {
+          path = path.startsWith("/") ? path : variables["PWD"] + "/" + path;
+          return disk.find(path);
+        },
+        changeDirectory: (path: string) => changeCurrentDir(path),
       };
       const gen = command(stdin, args, context);
       for await (const event of gen) {
@@ -286,3 +271,36 @@ export const out = (data: string): StreamEvent => ({
 export const handleError = (e: any) => {
   return err(e instanceof Error ? e.message + "\n" : "Internal error\n");
 };
+
+// todo при запуске процесса
+
+function readEnvFile() {
+  const envFile = disk.find(envPath) as FileNode;
+  if (!envFile) return [];
+  var envs = envFile.content.split("\n");
+
+  return Object.fromEntries(
+    envs.map((x) => {
+      const kvp = x.split("=").filter((x) => x.trim() !== "");
+      return kvp;
+    })
+  );
+}
+
+const variables: Record<string, string> = readEnvFile();
+
+function getPathCommands() {
+  const commands: Record<string, ShellCommand> = {};
+  const pathValue = variables["PATH"];
+  if (!pathValue) return commands;
+  const paths = pathValue.split(";").filter((x) => x.trim() !== "");
+
+  for (let path of paths) {
+    const dir = disk.findDirectory(path);
+    for (let node of dir.children) {
+      if ("command" in node) commands[node.name] = node.command;
+    }
+  }
+
+  return commands;
+}

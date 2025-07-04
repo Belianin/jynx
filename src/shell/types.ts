@@ -1,4 +1,5 @@
 import { Disk } from "../disk/disk";
+import { DiskNode } from "../disk/types";
 import { ParsedArgs } from "./parsing";
 
 export type StreamEvent = {
@@ -25,4 +26,11 @@ export type ShellContext = {
   disk: Disk;
   isStdoutToConsole: boolean;
   parseArgs: (args: string[]) => ParsedArgs;
+  std: {
+    out: (text: string) => StreamEvent;
+    err: (text: string) => StreamEvent;
+  };
+  open: (path: string) => DiskNode | undefined;
+  variables: Record<string, string>;
+  changeDirectory: (path: string) => void;
 };

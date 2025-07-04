@@ -20,7 +20,7 @@ export class Disk {
     ownerGroup: "guest",
   };
 
-  find = (path: string): DiskNode | null => {
+  find = (path: string): DiskNode | undefined => {
     let current = this.root as FolderLikeNode;
     if (path === "/") return current;
     const parts = path.split("/").splice(1);
@@ -36,12 +36,7 @@ export class Disk {
       } else throw new Error(`${this.getPath(current)}/${part} not extists`);
     }
 
-    const result = current.children.find(
-      (x) => x.name === parts[parts.length - 1]
-    );
-    if (result) return result;
-
-    return null;
+    return current.children.find((x) => x.name === parts[parts.length - 1]);
   };
 
   // todo remove
