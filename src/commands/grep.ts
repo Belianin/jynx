@@ -1,7 +1,10 @@
-import { err, out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
-export const grepCommand: ShellCommand = async function* (stdin, args) {
+export const grepCommand: ShellCommand = async function* (
+  stdin,
+  args,
+  { std: { out, err } }
+) {
   const pattern = args.length > 0 ? args[0] : "";
   let buffer = "";
 
@@ -17,7 +20,6 @@ export const grepCommand: ShellCommand = async function* (stdin, args) {
     }
   }
 
-  // обработка оставшегося буфера при EOF
   if (buffer && buffer.includes(pattern)) {
     yield err(buffer);
   }

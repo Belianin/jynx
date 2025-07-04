@@ -4,7 +4,7 @@ import { ShellCommand } from "../shell/types";
 export const catCommand: ShellCommand = async function* (
   stdin,
   args,
-  { disk, std: { out }, open }
+  { std: { out }, fs: { open } }
 ) {
   if (args.length === 0) return 0;
   const filename = args[0];

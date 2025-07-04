@@ -1,8 +1,12 @@
 import { disk } from "../disk/disk";
-import { handleError, out } from "../shell/shell";
+import { handleError } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
-export const diskCommand: ShellCommand = async function* (stdin, args) {
+export const diskCommand: ShellCommand = async function* (
+  stdin,
+  args,
+  { std: { out } }
+) {
   try {
     yield out(
       JSON.stringify(

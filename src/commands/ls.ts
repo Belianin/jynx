@@ -1,20 +1,24 @@
-import { disk } from "../disk/disk";
-import { isFile } from "../disk/types";
-import { CURRENT_DIR } from "../shell/env";
-import { handleError, out } from "../shell/shell";
+import { isFile, isFolder } from "../disk/types";
+import { handleError } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const listDirectoryCommand: ShellCommand = async function* (
   stdin,
   args,
-  { parseArgs }
+  { parseArgs, std: { out }, fs: { open }, variables: { PWD } }
 ) {
   const { flags, positional } = parseArgs(args);
   try {
-    const path = positional.length === 0 ? CURRENT_DIR : positional[0];
-    let folder = path.startsWith("/")
-      ? disk.findDirectory(path)
-      : disk.findDirectory(CURRENT_DIR + "/" + path);
+    const path = positional[0] || PWD;
+    const folder = open(path);
+    if (!folder) {
+      out(`${path} not found`);
+      return 1;
+    }
+    if (!isFolder(folder)) {
+      out(`${path} is not a folder`);
+      return 1;
+    }
 
     const items = folder.children.filter(
       (x) => !x.name.startsWith(".") || flags["a"]

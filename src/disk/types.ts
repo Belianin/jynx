@@ -25,6 +25,7 @@ export type ProgramFileNode = NodeInfo & {
   parent: FolderLikeNode;
   type: "x";
 };
+// todo rename to DirectoryNode
 export type FolderNode = NodeInfo & {
   name: string;
   children: NonRoot[];

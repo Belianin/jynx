@@ -66,6 +66,7 @@ export class Disk {
 
   makeDirectory = (path: string) => {
     let current = this.root as FolderLikeNode;
+    let lastCreated: FolderNode | undefined;
     for (let folder of path.split("/")) {
       if (folder === "") continue;
 
@@ -89,7 +90,10 @@ export class Disk {
         };
         current.children.push(newFolder);
         current = newFolder;
+        lastCreated = newFolder;
       }
+
+      return lastCreated;
     }
   };
 
@@ -136,7 +140,7 @@ export class Disk {
     current.children.push(file);
   };
 
-  makeFile = (path: string, content: string): FileNode => {
+  makeFile = (path: string, content?: string): FileNode => {
     let current = this.root as FolderLikeNode;
     const parts = path.split("/");
     for (let i = 0; i < parts.length - 1; i++) {
@@ -167,7 +171,7 @@ export class Disk {
     }
     const file: FileNode = {
       parent: current,
-      content,
+      content: content || "",
       name: parts[parts.length - 1],
       permissions: "rw-r--r--",
       type: "-",
