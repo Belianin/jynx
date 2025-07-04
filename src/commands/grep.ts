@@ -1,3 +1,4 @@
+import { err, out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const grepCommand: ShellCommand = async function* (stdin, args) {
@@ -10,7 +11,7 @@ export const grepCommand: ShellCommand = async function* (stdin, args) {
     while ((index = buffer.indexOf("\n")) !== -1) {
       const line = buffer.slice(0, index);
       if (line.includes(pattern)) {
-        yield { type: "stdout", data: line + "\n" };
+        yield out(line);
       }
       buffer = buffer.slice(index + 1);
     }
@@ -18,7 +19,7 @@ export const grepCommand: ShellCommand = async function* (stdin, args) {
 
   // обработка оставшегося буфера при EOF
   if (buffer && buffer.includes(pattern)) {
-    yield { type: "stdout", data: buffer + "\n" };
+    yield err(buffer);
   }
 
   return 0;

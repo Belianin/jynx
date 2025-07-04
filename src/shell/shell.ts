@@ -15,7 +15,7 @@ import { FileNode } from "../disk/types";
 import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
 import { CommandToken, shellParse } from "./parsing";
 import { PrintableText, print } from "./print";
-import { ShellCommand, Stream, WritableStreamLike } from "./types";
+import { ShellCommand, Stream, StreamEvent, WritableStreamLike } from "./types";
 
 export const getPrefix = (): PrintableText[] => {
   return [
@@ -260,3 +260,15 @@ disk.makeFile(envPath, `PATH=${sysProgramsPath};${usrProgramsPath}`);
 disk.makeDirectory(sysProgramsPath);
 disk.makeDirectory(usrProgramsPath);
 disk.makeDirectory(CURRENT_DIR);
+
+export const err = (data: string): StreamEvent => ({
+  type: "stderr",
+  data: data.endsWith("\n") ? data : data + "\n",
+});
+export const out = (data: string): StreamEvent => ({
+  type: "stdout",
+  data: data.endsWith("\n") ? data : data + "\n",
+});
+export const handleError = (e: any) => {
+  return err(e instanceof Error ? e.message + "\n" : "Internal error\n");
+};

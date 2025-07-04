@@ -1,10 +1,11 @@
+import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const echoCommand: ShellCommand = async function* echoCommand(
   stdin,
   args
 ) {
-  yield { type: "stdout", data: args?.join(" ") + "\n" };
+  yield out(args?.join(" "));
   return 0;
 };
 

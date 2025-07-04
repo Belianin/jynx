@@ -1,5 +1,6 @@
 import { disk } from "../disk/disk";
 import { CURRENT_DIR } from "../shell/env";
+import { handleError } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const makeDirectoryCommand: ShellCommand = async function* (
@@ -13,8 +14,7 @@ export const makeDirectoryCommand: ShellCommand = async function* (
     disk.makeDirectory(path);
     return 0;
   } catch (e: any) {
-    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
-    else yield { type: "stderr", data: "Internal error\n" };
+    yield handleError(e);
   }
 
   return 1;

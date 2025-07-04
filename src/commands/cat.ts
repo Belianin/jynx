@@ -1,5 +1,6 @@
 import { disk } from "../disk/disk";
 import { CURRENT_DIR } from "../shell/env";
+import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const cat = (filename: string) => {
@@ -16,6 +17,6 @@ export const catCommand: ShellCommand = async function* (stdin, args) {
     ? args[0]
     : CURRENT_DIR + "/" + args[0];
   const data = cat(destination);
-  yield { type: "stdout", data: data.endsWith("\n") ? data : data + "\n" };
+  yield out(data);
   return 0;
 };

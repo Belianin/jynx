@@ -1,5 +1,6 @@
 import { disk } from "../disk/disk";
 import { DiskNode } from "../disk/types";
+import { out } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const treeCommand: ShellCommand = async function* (stdin, args) {
@@ -10,6 +11,7 @@ export const treeCommand: ShellCommand = async function* (stdin, args) {
     //   type: "stdout",
     //   data: "\t".repeat(intendation) + node.name + "\n",
     //});
+    // todo many yield
     result += "\t".repeat(intendation) + node.name + "\n";
     if ("children" in node) {
       for (let child of node.children) {
@@ -25,6 +27,6 @@ export const treeCommand: ShellCommand = async function* (stdin, args) {
   //     const node = stack.pop()
   //   }
 
-  yield { type: "stdout", data: result };
+  yield out(result);
   return 0;
 };

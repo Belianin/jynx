@@ -1,5 +1,6 @@
 import { disk } from "../disk/disk";
 import { changeCurrentDir, CURRENT_DIR } from "../shell/env";
+import { err } from "../shell/shell";
 import { ShellCommand } from "../shell/types";
 
 export const changeDirectoryCommand: ShellCommand = async function* (
@@ -15,8 +16,7 @@ export const changeDirectoryCommand: ShellCommand = async function* (
     changeCurrentDir(disk.getPath(folder));
     return 0;
   } catch (e: any) {
-    if (e instanceof Error) yield { type: "stderr", data: e.message + "\n" };
-    else yield { type: "stderr", data: "Internal error\n" };
+    yield err(e);
   }
 
   return 1;
