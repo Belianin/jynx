@@ -28,6 +28,8 @@ export type ShellContext = {
     remove: (path: string) => void;
     createFile: (path: string) => FileNode | undefined;
     createDirectory: (path: string) => FolderNode | undefined;
+    changeWorkingDirectory: (path: string) => void;
+    getPathTo: (path: string) => string;
   };
   isStdoutToConsole: boolean;
   parseArgs: (args: string[]) => ParsedArgs;

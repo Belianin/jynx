@@ -193,8 +193,27 @@ async function runPipeline(commands: CommandToExecute[]) {
         PWD: CURRENT_DIR,
       };
 
-      const getPathTo = (path: string) =>
-        path.startsWith("/") ? path : procVariables["PWD"] + "/" + path;
+      const getPathTo = (path: string) => {
+        const parts = path.startsWith("/")
+          ? [""]
+          : CURRENT_DIR === "/"
+          ? [""]
+          : CURRENT_DIR.split("/");
+
+        // Разбиваем path по / и обрабатываем каждый элемент
+        path.split("/").forEach((segment) => {
+          if (segment === "..") {
+            if (parts.length > 1) {
+              parts.pop();
+            }
+          } else if (segment !== "" && segment !== ".") {
+            parts.push(segment);
+          }
+        });
+
+        // Собираем финальный путь
+        return parts.join("/") || "/";
+      };
 
       const context: ShellContext = {
         color: colorToConvert,
@@ -205,6 +224,14 @@ async function runPipeline(commands: CommandToExecute[]) {
           createDirectory: (path: string) =>
             disk.makeDirectory(getPathTo(path)),
           createFile: (path: string) => disk.makeFile(getPathTo(path)),
+          getPathTo,
+          changeWorkingDirectory: (path: string) => {
+            path = getPathTo(path);
+            const dir = disk.find(path);
+            if (dir && (dir.type === "d" || dir.type === "r"))
+              changeCurrentDir(path);
+            else print("Path to found\n");
+          },
         },
         parseArgs,
         std: {
@@ -272,6 +299,7 @@ export const out = (data: string): StreamEvent => ({
   data: data.endsWith("\n") ? data : data + "\n",
 });
 export const handleError = (e: any) => {
+  console.error(e);
   return err(e instanceof Error ? e.message + "\n" : "Internal error\n");
 };
 
