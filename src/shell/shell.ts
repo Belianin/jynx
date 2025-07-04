@@ -15,7 +15,7 @@ import { disk } from "../disk/disk";
 import { FileNode } from "../disk/types";
 import { changeCurrentDir, CURRENT_DIR, DOMAIN, USERNAME } from "./env";
 import { CommandToken, parseArgs, shellParse } from "./parsing";
-import { print, PrintableText } from "./print";
+import { parseColorText, print, PrintableText } from "./print";
 import {
   ShellCommand,
   ShellContext,
@@ -140,8 +140,16 @@ async function runPipeline(commands: CommandToExecute[]) {
 
   const processes = commands.map(({ command, args, redirects }, i) => {
     let stdin = i === 0 ? emptyStdin() : streams[i - 1];
-    let stdout: WritableStreamLike | Stream;
-    let stderr: WritableStreamLike | Stream | null = null;
+    let stdout: WritableStreamLike | Stream = {
+      write: (data) => print(parseColorText(data)),
+    };
+    let stderr: WritableStreamLike | Stream = {
+      write: (data) => {
+        const parsedColors = parseColorText(data);
+        if (parsedColors.length === 1) print({ color: "red", value: data });
+        else print(parsedColors);
+      },
+    };
 
     const stdoutRedirect = redirects.find((r) => r.fd === 1);
     const stderrRedirect = redirects.find((r) => r.fd === 2);
@@ -159,11 +167,6 @@ async function runPipeline(commands: CommandToExecute[]) {
     } else if (i < commands.length - 1) {
       // Не последняя команда — stdout в pipe
       stdout = streams[i];
-    } else {
-      // Последняя команда — stdout в print
-      stdout = {
-        write: (data) => print(data),
-      };
     }
 
     // Определим stderr
@@ -177,13 +180,6 @@ async function runPipeline(commands: CommandToExecute[]) {
           stderrRedirect.type === ">>"
         ); // >> так ли это?
       }
-    }
-
-    if (!stderr) {
-      // Если stderr не назначен явно и не перенаправлен в stdout, выводим красным цветом
-      stderr = {
-        write: (data) => print({ color: "red", value: data }),
-      };
     }
 
     // Если stderr перенаправлен в stdout
@@ -201,7 +197,7 @@ async function runPipeline(commands: CommandToExecute[]) {
         path.startsWith("/") ? path : variables["PWD"] + "/" + path;
 
       const context: ShellContext = {
-        isStdoutToConsole: !!stdoutRedirect,
+        isStdoutToConsole: !stdoutRedirect,
         fs: {
           open: (path: string) => disk.find(getPathTo(path)),
           remove: (path: string) => disk.remove(getPathTo(path)),

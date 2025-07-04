@@ -5,7 +5,13 @@ import { ShellCommand } from "../shell/types";
 export const listDirectoryCommand: ShellCommand = async function* (
   stdin,
   args,
-  { parseArgs, std: { out }, fs: { open }, variables: { PWD } }
+  {
+    parseArgs,
+    std: { out },
+    fs: { open },
+    variables: { PWD },
+    isStdoutToConsole,
+  }
 ) {
   const { flags, positional } = parseArgs(args);
   try {
@@ -49,16 +55,35 @@ export const listDirectoryCommand: ShellCommand = async function* (
       }
 
       // печатаем с выравниванием
-      for (const row of rows) {
+      for (const [row, j] of rows.map(
+        (row, j) => [row, j] as [string[], number]
+      )) {
         const line = row
-          .map((val, i) => val.padStart(colWidths[i] + 1))
+          .map((val, i) => {
+            const padded = i !== 0 ? val.padStart(colWidths[i] + 1) : val;
+            if (
+              isStdoutToConsole &&
+              items[j].type === "-" &&
+              i === row.length - 1
+            )
+              return `\x1b[33m${padded}\x1b[0m`; // todo style
+            return padded;
+          })
           .join("");
         yield out(line);
       }
 
       return 0;
     } else {
-      yield out(items.map((x) => x.name).join("\t"));
+      yield out(
+        items
+          .map((x) => {
+            if (x.type === "-" && isStdoutToConsole)
+              return `\x1b[33m${x.name}\x1b[0m`;
+            return x.name;
+          })
+          .join("\t")
+      );
       return 0;
     }
   } catch (e: any) {
