@@ -277,20 +277,24 @@ class HtmlLineInput implements LineInput {
     this.terminal.write(value);
     this.value += value;
     this.cursorPos += value.length;
+    console.log(this.value);
   }
   remove() {
     if (this.cursorPos === 0) return;
     this.cursorPos -= 1;
     this.terminal.remove();
     this.value =
-      this.value.substring(0, this.cursorPos - 1) +
-      this.value.substring(this.cursorPos);
+      this.value.substring(0, this.cursorPos) +
+      this.value.substring(this.cursorPos + 1);
+    console.log(this.value);
   }
   removeAfterCursorLine() {
     this.terminal.removeAfterCursorLine();
     this.value = this.value.substring(0, this.cursorPos);
+    console.log(this.value);
   }
   moveCursor(delta: number) {
+    console.log(this.value);
     this.cursorPos += delta;
     if (this.cursorPos < 0) this.cursorPos = 0;
 
@@ -302,15 +306,22 @@ class HtmlLineInput implements LineInput {
     this.terminal.setCursorPosition(x, y);
   }
   moveCursorToStart() {
+    console.log(this.value);
     this.terminal.setCursorPosition(this.startPos.x, this.startPos.y);
     this.cursorPos = 0;
   }
   moveCursorToEnd() {
-    console.log("Not implemented");
+    console.log(this.value);
     this.cursorPos = this.value.length;
+    let linX = this.startPos.x + this.startPos.y * this.terminal.width; // todo свойство терминала
+    linX += this.cursorPos;
+
+    const x = linX % this.terminal.width;
+    const y = Math.floor(linX / this.terminal.width); // todo copy-paster
+    this.terminal.setCursorPosition(x, y);
   }
   setCursor(pos: number) {
-    console.log("Not implemented");
+    console.log(this.value);
     this.cursorPos = pos;
     if (this.cursorPos < 0) this.cursorPos = 0;
     else if (this.cursorPos > this.value.length)
@@ -554,13 +565,12 @@ export const shell: ShellCommand = async function* (
 
   let input = new HtmlLineInput(terimal);
 
-  function writeHistoryCommand(delta: number) {
-    const i = input;
-    const command = getHistoryCommand(delta);
-    i.moveCursorToStart();
-    i.removeAfterCursorLine();
-    i.write(command);
-  }
+  const writeHistoryCommand = (delta: number) => {
+    const command = getHistoryCommand(delta); // todo closure?
+    input.moveCursorToStart();
+    input.removeAfterCursorLine();
+    input.write(command);
+  };
 
   function onKey(e: KeyboardEvent) {
     // if (this.terminal.isOpen) {
@@ -592,15 +602,17 @@ export const shell: ShellCommand = async function* (
       writeHistoryCommand(-1);
     } else if (e.key === "Enter") {
       const result = input.value;
-      input = new HtmlLineInput(terimal); // todo перенести в аргументы
+      input.moveCursorToEnd();
       if (result !== "") {
         terimal.write("\n");
         history.push(result);
         execute(result).then((x) => {
           terimal.write(prefix);
+          input = new HtmlLineInput(terimal); // todo перенести в аргументы
         });
       } else {
         terimal.write(`\n${prefix}`);
+        input = new HtmlLineInput(terimal); // todo перенести в аргументы
       }
     }
   }
