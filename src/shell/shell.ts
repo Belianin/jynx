@@ -121,6 +121,284 @@ class ShellInput {
   }
 }
 
+export type Process = {
+  id: number;
+  command: ShellCommand;
+  workingDirectory: string;
+};
+
+export type ProcessContext = {
+  fs: Disk;
+  variables: Record<string, string>;
+  terminal: Terminal;
+};
+
+export interface Core {
+  processes: Record<number, Process>;
+  run: (
+    command: ShellCommand,
+    args: string[],
+    isStdoutToConsole: boolean,
+    variables: Record<string, string>
+  ) => Process;
+}
+
+export class Jynx implements Core {
+  processes: Record<number, Process>;
+  lastProcessId: number;
+  fs: Disk;
+  terminal: HtmlTerminal;
+
+  constructor(fs: Disk, terminal: HtmlTerminal) {
+    this.fs = fs;
+    this.processes = {};
+    this.lastProcessId = 0;
+    this.terminal = terminal;
+  }
+
+  run(
+    command: ShellCommand,
+    args: string[],
+    isStdoutToConsole: boolean,
+    variables: Record<string, string>
+  ) {
+    let processId = this.lastProcessId;
+    const process: Process = {
+      id: processId,
+      command,
+      workingDirectory: "/home/guest", // todo
+    };
+
+    const getPathTo = (path: string) => {
+      const parts = path.startsWith("/")
+        ? [""]
+        : process.workingDirectory === "/"
+        ? [""]
+        : process.workingDirectory.split("/");
+
+      // Разбиваем path по / и обрабатываем каждый элемент
+      path.split("/").forEach((segment) => {
+        if (segment === "..") {
+          if (parts.length > 1) {
+            parts.pop();
+          }
+        } else if (segment !== "" && segment !== ".") {
+          parts.push(segment);
+        }
+      });
+
+      // Собираем финальный путь
+      return parts.join("/") || "/";
+    };
+
+    this.processes[processId] = process;
+    const iterator = command(emptyStdin(), args, {
+      color: colorToConvert,
+      isStdoutToConsole,
+      fs: {
+        open: (path: string) => this.fs.find(getPathTo(path)),
+        remove: (path: string) => this.fs.remove(getPathTo(path)),
+        createDirectory: (path: string) =>
+          this.fs.makeDirectory(getPathTo(path)),
+        createFile: (path: string) => this.fs.makeFile(getPathTo(path)),
+        getPathTo,
+        changeWorkingDirectory: (path: string) => {
+          path = getPathTo(path);
+          const dir = this.fs.find(path);
+          if (dir && (dir.type === "d" || dir.type === "r"))
+            changeCurrentDir(path);
+          // else this.print("Path to found\n"); // todo
+        },
+        makeSysFile: (path: string, command: ShellCommand) =>
+          this.fs.makeSysFile(getPathTo(path), command),
+      },
+      tryBindTerminal: this.bindTerminal.bind(this),
+      parseArgs,
+      std: {
+        out,
+        err,
+      },
+      variables,
+      changeDirectory: (path: string) => (process.workingDirectory = path), // todo validate
+    });
+
+    function iterate() {
+      iterator.next().then(({ done, value }) => {
+        if (!done) {
+          // обработка value, если нужна
+          iterate(); // рекурсивно продолжаем
+        }
+      });
+    }
+    iterate();
+
+    return process;
+  }
+
+  bindTerminal() {
+    if (this.terminal.isOpen) return;
+    // this.terminal.clear(); // todo не уверен что всегда нужно
+    // this.input.hide();
+    this.terminal.isOpen = true;
+    this.terminal.buffer = "";
+    this.terminal.closedTermialPromise = new Promise<void>(
+      (res) => (this.terminal.resolveСlosedTermialPromise = res)
+    );
+    return this.terminal;
+  }
+}
+
+export const shell: ShellCommand = async function* (
+  stdin,
+  args,
+  { tryBindTerminal }
+) {
+  const isBinded = tryBindTerminal();
+  if (!isBinded) throw new Error("Faield to bind terminal");
+  const terimal = isBinded;
+
+  const history: string[] = [];
+  let historyCounter: number = 0;
+
+  const prefix = "/home/guest";
+
+  terimal.write("/home/guest");
+
+  function getHistoryCommand(delta: number) {
+    historyCounter += delta;
+    if (historyCounter < -1) historyCounter = -1;
+    if (historyCounter === -1) return "";
+
+    if (historyCounter >= history.length) {
+      historyCounter = history.length - 1;
+    }
+
+    return history[history.length - historyCounter - 1] || "";
+  }
+
+  function writeHistoryCommand(delta: number) {
+    const command = getHistoryCommand(delta);
+    terimal.setCursorPosition(prefix.length, undefined);
+    terimal.removeAfterCursorLine();
+    terimal.write(command);
+  }
+
+  function onKey(e: KeyboardEvent) {
+    // if (this.terminal.isOpen) {
+    //   this.terminal.onKeyCallback(e);
+    //   e.preventDefault();
+    //   return;
+    // }
+
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      // this.inputText =
+      //   this.inputText.slice(0, this.cursorPos) +
+      //   e.key +
+      //   this.inputText.slice(this.cursorPos);
+      // this.cursorPos++;
+    } else if (e.ctrlKey && e.key === "v") {
+      navigator.clipboard.readText().then((text) => terimal.write(text));
+    } else if (e.key === "Backspace") {
+      const { x } = terimal.getCursorPosition();
+      if (x > prefix.length) terimal.remove();
+    } else if (e.key === "Delete") {
+      const { x } = terimal.getCursorPosition();
+      if (x > prefix.length) terimal.remove();
+    } else if (e.key === "ArrowLeft") {
+      // переход на новую строку, ограничить длинной строки веедённой
+      const { x } = terimal.getCursorPosition();
+      if (x > prefix.length) terimal.setCursorPosition(x - 1, undefined);
+    } else if (e.key === "ArrowRight") {
+      const { x } = terimal.getCursorPosition();
+      terimal.setCursorPosition(x + 1, undefined);
+    } else if (e.key === "ArrowUp") {
+      writeHistoryCommand(1);
+    } else if (e.key === "ArrowDown") {
+      writeHistoryCommand(-1);
+    } else if (e.key === "Enter") {
+      terimal.write("\n");
+    }
+  }
+
+  isBinded.onKey(onKey);
+
+  await isBinded.closed();
+
+  return 0;
+};
+
+export class HtmlTerminal implements Terminal {
+  isOpen: boolean;
+  buffer: string;
+  closedTermialPromise: Promise<void> | null;
+  resolveСlosedTermialPromise: () => void;
+  onKeyCallback: KeyHandler;
+
+  parent: HTMLElement;
+  cursor: { x: number; y: number };
+  // inputElement: ShellInput;
+
+  constructor(parent: HTMLElement) {
+    this.isOpen = false;
+    this.buffer = "";
+    this.onKeyCallback = () => {};
+    this.closedTermialPromise = null;
+    this.resolveСlosedTermialPromise = () => {};
+    this.parent = parent;
+    // this.inputElement = new ShellInput(parent);
+    this.cursor = { x: 0, y: 0 };
+
+    parent.addEventListener("keydown", (e) => {
+      e.preventDefault();
+      this.onKeyCallback(e); // todo а не сломается ли
+    });
+  }
+
+  remove() {}
+  removeAfterCursorLine() {}
+
+  close() {
+    if (!this.isOpen) return;
+    this.isOpen = false;
+    this.buffer = "";
+    this.onKeyCallback = () => {};
+    this.resolveСlosedTermialPromise();
+    this.resolveСlosedTermialPromise = () => {};
+  }
+  getBuffer() {
+    return this.buffer;
+  }
+  write(value: string) {
+    this.parent.textContent += value; // todo
+    this.buffer += value;
+  }
+  onKey(callback: KeyHandler) {
+    this.onKeyCallback = callback;
+  }
+  closed() {
+    if (!this.closedTermialPromise) throw new Error("Terminal not binded");
+    return this.closedTermialPromise;
+  }
+  clear() {
+    this.parent.textContent = "";
+    this.buffer = "";
+  }
+  setCursorPosition(x: number | undefined, y: number | undefined) {
+    this.cursor = { x: x || this.cursor.x, y: y || this.cursor.y }; // todo баг с нулём
+  }
+  getCursorPosition() {
+    return this.cursor;
+  }
+}
+
+type TerminalState = {
+  isOpen: boolean;
+  buffer: string;
+  onKeyCallback: (e: KeyboardEvent) => void;
+  closedTermialPromise: Promise<void> | null;
+  resolveСlosedTermialPromise: () => void;
+};
+
 // todo preventDefaults
 export class Shell {
   inputText: string;
@@ -190,6 +468,12 @@ export class Shell {
         parent.textContent = "";
         parent.appendChild(inputElement.inputElement);
         this.buffer = "";
+      },
+      remove() {},
+      removeAfterCursorLine() {},
+      setCursorPosition() {},
+      getCursorPosition() {
+        return { x: 0, y: 0 };
       },
     } as Terminal & TerminalState;
   }
@@ -545,11 +829,3 @@ export const handleError = (e: any) => {
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
-
-type TerminalState = {
-  isOpen: boolean;
-  buffer: string;
-  onKeyCallback: (e: KeyboardEvent) => void;
-  closedTermialPromise: Promise<void> | null;
-  resolveСlosedTermialPromise: () => void;
-};

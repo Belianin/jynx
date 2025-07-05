@@ -23,14 +23,21 @@ export interface Stream extends AsyncIterable<string>, WritableStreamLike {
   close(): void;
 }
 
-export type Terminal = {
+export interface Terminal {
   getBuffer: () => string;
   write: (value: string) => void;
+  remove: () => void;
   close: () => void;
   onKey: (callback: KeyHandler) => void;
   closed: () => Promise<void>;
   clear: () => void;
-};
+  getCursorPosition: () => {
+    x: number;
+    y: number;
+  };
+  setCursorPosition: (x: number | undefined, y: number | undefined) => void;
+  removeAfterCursorLine: () => void;
+}
 
 export type ShellContext = {
   fs: {
