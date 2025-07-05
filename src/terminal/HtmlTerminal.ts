@@ -111,26 +111,10 @@ export default class HtmlTerminal implements Terminal {
   write(value: string) {
     let prev = this.cursor.previousSibling;
     if (!prev) {
-      if (value === "c") {
-        const span = document.createElement("span");
-        prev = span;
-        span.style.color = "red";
-        this.parent.insertBefore(prev, this.cursor); // todo цвет
-      } else {
-        prev = document.createTextNode("");
-        this.parent.insertBefore(prev, this.cursor); // todo цвет
-      }
-      prev.textContent = prev.textContent + value;
-    } else {
-      if (value === "c") {
-        const span = document.createElement("span");
-        this.parent.insertBefore(span, this.cursor);
-        span.style.color = "red";
-        span.textContent = value;
-      } else {
-        prev.textContent = prev.textContent + value;
-      }
+      prev = document.createTextNode("");
+      this.parent.insertBefore(prev, this.cursor); // todo цвет
     }
+    prev.textContent = prev.textContent + value;
 
     this.linPos += value.length; // todo копипаста
     this.cursorPos.x = this.linPos % this.width;
