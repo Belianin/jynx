@@ -321,11 +321,217 @@ class HtmlLineInput implements LineInput {
 export const shell: ShellCommand = async function* (
   stdin,
   args,
-  { tryBindTerminal }
+  { tryBindTerminal, fs }
 ) {
   const isBinded = tryBindTerminal();
   if (!isBinded) throw new Error("Faield to bind terminal");
   const terimal = isBinded;
+
+  const readEnvFile = () => {
+    const envFile = fs.open(envPath);
+    if (!envFile || envFile.type !== "-") return [];
+    var envs = envFile.content.split("\n");
+
+    const res: any = Object.fromEntries(
+      envs.map((x) => {
+        const kvp = x.split("=").filter((x) => x.trim() !== "");
+        return kvp;
+      })
+    );
+
+    return res;
+  };
+  const variables: Record<string, string> = readEnvFile();
+
+  const getPathCommands = () => {
+    const commands: Record<string, ShellCommand> = {};
+    const pathValue = variables["PATH"];
+    if (!pathValue) return commands;
+    const paths = pathValue.split(";").filter((x) => x.trim() !== "");
+    console.log(paths);
+    for (let path of paths) {
+      const dir = fs.open(path);
+      if (!dir || dir.type !== "d") continue;
+      for (let node of dir.children) {
+        if ("command" in node) commands[node.name] = node.command;
+      }
+    }
+
+    return commands;
+  };
+
+  const execute = async (text: string) => {
+    if (text === "") return;
+
+    const commands = getPathCommands();
+
+    const parsed = shellParse(text);
+    const commandsToExecute: CommandToExecute[] = [];
+    for (let { args, redirects } of parsed) {
+      const commandName = args[0];
+      const command = commands[commandName];
+      if (!command) {
+        terimal.write(`Command '${commandName}' not found\n`);
+        return;
+      }
+
+      commandsToExecute.push({
+        command,
+        args: args.splice(1),
+        redirects,
+      });
+    }
+
+    try {
+      await runPipeline(commandsToExecute);
+    } catch (e: any) {
+      if (e instanceof Error) terimal.write(e.message + "\n");
+      else terimal.write("Internal problem\n");
+      // if (e instanceof Error) this.print({ color: "red", value: e.message });
+      // else this.print("Internal problem");
+      // this.print("\n");
+    }
+  };
+
+  const runPipeline = async (commands: CommandToExecute[]) => {
+    const streams = commands.map(() => createStream());
+
+    const createWriteStream = (
+      target: string,
+      append: boolean
+    ): {
+      write: (data: string) => void;
+      close: () => void;
+    } => {
+      const path = target.startsWith("/") ? target : `${CURRENT_DIR}/${target}`;
+      let file = fs.open(path);
+      if (!file) {
+        file = fs.createFile(path);
+      }
+      if (!file || file.type !== "-") {
+        throw new Error(`${file} is not a file`);
+      }
+
+      if (!append) file.content = "";
+      return {
+        write(data: string) {
+          file.content += data;
+        },
+        close: () => {},
+      };
+    };
+
+    const processes = commands.map(({ command, args, redirects }, i) => {
+      let stdin = i === 0 ? emptyStdin() : streams[i - 1];
+      let stdout: WritableStreamLike | Stream = {
+        write: (data) => terimal.write(data), // todo terimal.write(parseColorText(data)),
+      };
+      let stderr: WritableStreamLike | Stream = {
+        write: (data) => {
+          terimal.write(data);
+          // const parsedColors = parseColorText(data);
+          // if (parsedColors.length === 1)
+          //   terimal.write(data);//this.print({ color: "red", value: data });
+          // else terimal.write(parsedColors);
+        },
+      };
+
+      const stdoutRedirect = redirects.find((r) => r.fd === 1);
+      const stderrRedirect = redirects.find((r) => r.fd === 2);
+
+      // Флаг для перенаправления stderr в stdout (например, 2>&1)
+      let stderrToStdout = false;
+
+      // Определим stdout
+      if (stdoutRedirect) {
+        // Пример простой обработки '>' и '>>', без реального файла — нужно заменить под задачу
+        stdout = createWriteStream(
+          stdoutRedirect.target,
+          stdoutRedirect.type === ">>"
+        );
+      } else if (i < commands.length - 1) {
+        // Не последняя команда — stdout в pipe
+        stdout = streams[i];
+      }
+
+      // Определим stderr
+      if (stderrRedirect) {
+        if (stderrRedirect.type === ">&" && stderrRedirect.target === "1") {
+          // stderr перенаправляем в stdout
+          stderrToStdout = true;
+        } else {
+          stderr = createWriteStream(
+            stderrRedirect.target,
+            stderrRedirect.type === ">>"
+          ); // >> так ли это?
+        }
+      }
+
+      // Если stderr перенаправлен в stdout
+      if (stderrToStdout) {
+        stderr = stdout;
+      }
+
+      return (async () => {
+        const procVariables = {
+          ...variables,
+          PWD: CURRENT_DIR,
+        };
+
+        const getPathTo = (path: string) => {
+          const parts = path.startsWith("/")
+            ? [""]
+            : CURRENT_DIR === "/"
+            ? [""]
+            : CURRENT_DIR.split("/");
+
+          // Разбиваем path по / и обрабатываем каждый элемент
+          path.split("/").forEach((segment) => {
+            if (segment === "..") {
+              if (parts.length > 1) {
+                parts.pop();
+              }
+            } else if (segment !== "" && segment !== ".") {
+              parts.push(segment);
+            }
+          });
+
+          // Собираем финальный путь
+          return parts.join("/") || "/";
+        };
+
+        const context: ShellContext = {
+          color: colorToConvert,
+          isStdoutToConsole: !stdoutRedirect && i === commands.length - 1,
+          fs,
+          tryBindTerminal,
+          parseArgs,
+          std: {
+            out,
+            err,
+          },
+          variables: procVariables,
+          changeDirectory: (path: string) => changeCurrentDir(path),
+        };
+        const gen = command(stdin, args, context);
+        for await (const event of gen) {
+          if (event.type === "stdout") {
+            stdout.write(event.data);
+          } else {
+            stderr.write(event.data);
+          }
+        }
+        if ("close" in stdout) {
+          stdout.close();
+        }
+        if ("close" in stderr) {
+          stderr.close();
+        }
+      })();
+    });
+
+    await Promise.all(processes);
+  };
 
   const history: string[] = [];
   let historyCounter: number = 0;
@@ -349,10 +555,11 @@ export const shell: ShellCommand = async function* (
   let input = new HtmlLineInput(terimal);
 
   function writeHistoryCommand(delta: number) {
+    const i = input;
     const command = getHistoryCommand(delta);
-    input.moveCursorToStart();
-    input.removeAfterCursorLine();
-    input.write(command);
+    i.moveCursorToStart();
+    i.removeAfterCursorLine();
+    i.write(command);
   }
 
   function onKey(e: KeyboardEvent) {
@@ -385,12 +592,16 @@ export const shell: ShellCommand = async function* (
       writeHistoryCommand(-1);
     } else if (e.key === "Enter") {
       const result = input.value;
-      if (result !== "") {
-        terimal.write(`\nLaunching: ${result}...`);
-        history.push(input.value);
-      }
-      terimal.write(`\n${prefix}`);
       input = new HtmlLineInput(terimal); // todo перенести в аргументы
+      if (result !== "") {
+        terimal.write("\n");
+        history.push(result);
+        execute(result).then((x) => {
+          terimal.write(prefix);
+        });
+      } else {
+        terimal.write(`\n${prefix}`);
+      }
     }
   }
 

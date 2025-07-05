@@ -24,6 +24,7 @@ export interface Stream extends AsyncIterable<string>, WritableStreamLike {
 }
 
 export interface Terminal {
+  width: number;
   getBuffer: () => string;
   write: (value: string) => void;
   remove: () => void;
