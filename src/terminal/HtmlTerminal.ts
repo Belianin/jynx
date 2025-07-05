@@ -13,10 +13,10 @@ export default class HtmlTerminal implements Terminal {
   // inputElement: ShellInput;
 
   cursor: HTMLSpanElement;
-  // prev: HTMLPreElement;
-  // next: HTMLPreElement;
-  prev: Text;
-  next: Text;
+  // prev: HTMLElement;
+  // next: HTMLElement;
+  // prev: Text;
+  // next: Text;
 
   width: number; // todo real
 
@@ -33,16 +33,19 @@ export default class HtmlTerminal implements Terminal {
     this.cursor = document.createElement("span");
     this.cursor.classList.add("cursor");
     this.cursor.textContent = "█";
-    this.prev = document.createTextNode("");
-    // this.prev = document.createElement("pre");
-    // // this.prev.classList.add("rendered-text");
+    // this.prev = document.createTextNode("");
+    // const prev = document.createTextNode("");
+    // this.prev = document.createElement("span");
+    // this.prev.classList.add("rendered-text");
     // this.prev.textContent = "    f\nfd     f";
-    this.next = document.createTextNode("");
-    // this.next = document.createElement("pre");
+    // this.next = document.createTextNode("");
+    // this.next = document.createElement("span");
     // this.next.classList.add("rendered-text");
-    parent.appendChild(this.prev);
+    // parent.appendChild(this.prev);
+    // this.prev.appendChild(document.createTextNode(""));
     parent.appendChild(this.cursor);
-    parent.appendChild(this.next);
+    // parent.appendChild(this.next);
+    // this.next.appendChild(document.createTextNode(""));
 
     parent.style.whiteSpace = "pre"; // todo нужно ли?
 
@@ -56,23 +59,41 @@ export default class HtmlTerminal implements Terminal {
   }
 
   remove() {
-    if (this.prev.textContent.length > 0) {
-      this.prev.textContent = this.prev.textContent.substring(
-        0,
-        this.prev.textContent.length - 1
-      );
+    let prev = this.cursor.previousSibling;
+    if (!prev) return;
 
-      this.linPos = this.linPos - 1; // todo копипаста
-      this.cursorPos.x = this.linPos % this.width;
-      this.cursorPos.y = Math.floor(this.linPos / this.width);
+    while (prev!.textContent?.length === 0) {
+      prev = prev!.previousSibling;
+      prev!.remove();
+      if (prev === null) return;
     }
+
+    prev.textContent = prev.textContent!.substring(
+      0,
+      prev.textContent!.length - 1
+    );
+    if (prev.textContent === "") prev.remove();
+
+    this.linPos = this.linPos - 1; // todo копипаста
+    this.cursorPos.x = this.linPos % this.width;
+    this.cursorPos.y = Math.floor(this.linPos / this.width);
   }
   removeAfterCursorLine() {
-    const newLine = this.next.textContent.indexOf("\n");
-    if (newLine !== -1) {
-      this.next.textContent = this.next.textContent.substring(0, newLine);
-    } else {
-      this.next.textContent = "";
+    let next = this.cursor.nextSibling;
+    while (next) {
+      if (!next.textContent) {
+        next.remove();
+        next = next.nextSibling; // todo store before remove?
+      } else {
+        const newLine = next.textContent.indexOf("\n");
+        if (newLine !== -1) {
+          next.textContent = next.textContent.substring(0, newLine);
+          return;
+        } else {
+          next.remove();
+          next = next.nextSibling;
+        }
+      }
     }
   }
 
@@ -88,28 +109,32 @@ export default class HtmlTerminal implements Terminal {
     return this.buffer;
   }
   write(value: string) {
-    // const newContent = this.parent.childNodes[0];
-    // newContent.textContent = newContent.textContent + value;
+    let prev = this.cursor.previousSibling;
+    if (!prev) {
+      if (value === "c") {
+        const span = document.createElement("span");
+        prev = span;
+        span.style.color = "red";
+        this.parent.insertBefore(prev, this.cursor); // todo цвет
+      } else {
+        prev = document.createTextNode("");
+        this.parent.insertBefore(prev, this.cursor); // todo цвет
+      }
+      prev.textContent = prev.textContent + value;
+    } else {
+      if (value === "c") {
+        const span = document.createElement("span");
+        this.parent.insertBefore(span, this.cursor);
+        span.style.color = "red";
+        span.textContent = value;
+      } else {
+        prev.textContent = prev.textContent + value;
+      }
+    }
 
     this.linPos += value.length; // todo копипаста
     this.cursorPos.x = this.linPos % this.width;
     this.cursorPos.y = Math.floor(this.linPos / this.width);
-
-    this.prev.textContent = this.prev.textContent + value;
-
-    // const frag = document.createDocumentFragment();
-    // const newContent = this.parent.childNodes[0];
-    // newContent.textContent = newContent.textContent + value;
-
-    // frag.appendChild(newContent);
-    // frag.appendChild(this.cursor);
-    // frag.appendChild(this.parent.childNodes[2]);
-
-    // this.parent.textContent = "";
-    // this.parent.appendChild(frag);
-
-    // this.cursor.insertBefore(this.parent, document.createTextNode("value")); // todo insertBefore?
-    // this.parent.textContent += value; // todo
     this.buffer += value;
   }
   onKey(callback: KeyHandler) {
@@ -120,8 +145,8 @@ export default class HtmlTerminal implements Terminal {
     return this.closedTermialPromise;
   }
   clear() {
-    this.prev.textContent = "";
-    this.next.textContent = "";
+    this.parent.textContent = "";
+    this.parent.appendChild(this.cursor);
     this.linPos = 0;
     this.cursorPos = { x: 0, y: 0 };
     this.buffer = "";
@@ -133,16 +158,55 @@ export default class HtmlTerminal implements Terminal {
     };
     this.linPos = this.cursorPos.x + this.cursorPos.y * this.width;
 
-    const prevText = this.prev.textContent;
-    if (prevText.length > this.linPos) {
-      this.prev.textContent = prevText.substring(0, this.linPos);
-      this.next.textContent =
-        prevText.substring(this.linPos) + this.next.textContent;
-    } else {
-      const nextText = this.next.textContent;
-      const index = this.linPos - prevText.length;
-      this.prev.textContent = prevText + nextText.substring(0, index);
-      this.next.textContent = nextText.substring(index);
+    const prevAfterCursor = this.cursor.previousSibling;
+    const nextAfterCursor = this.cursor.nextSibling;
+
+    this.cursor.remove();
+    if (
+      prevAfterCursor &&
+      nextAfterCursor &&
+      prevAfterCursor.nodeType === Node.TEXT_NODE &&
+      nextAfterCursor.nodeType === Node.TEXT_NODE
+    ) {
+      prevAfterCursor.textContent =
+        (prevAfterCursor.textContent || "") +
+        (nextAfterCursor.textContent || "");
+      nextAfterCursor.remove();
+    }
+
+    // todo считать от курсора?
+    let spanStartIndex = 0;
+    for (let span of this.parent.childNodes) {
+      const text = span.textContent || "";
+      if (spanStartIndex + text.length >= this.linPos) {
+        const preText = text.substring(0, this.linPos - spanStartIndex);
+        const nextText = text.substring(this.linPos - spanStartIndex);
+        if (span.nodeType === Node.TEXT_NODE) {
+          if (preText !== "")
+            this.parent.insertBefore(document.createTextNode(preText), span);
+          this.parent.insertBefore(this.cursor, span);
+          if (nextText !== "")
+            this.parent.insertBefore(document.createTextNode(nextText), span);
+          span.remove();
+        } else {
+          span.textContent = "";
+          if (preText !== "")
+            span.appendChild(
+              document.createTextNode(
+                text.substring(0, this.linPos - spanStartIndex)
+              )
+            );
+          span.appendChild(this.cursor);
+          if (nextText !== "")
+            span.appendChild(
+              document.createTextNode(
+                text.substring(this.linPos - spanStartIndex)
+              )
+            );
+        }
+        return;
+      }
+      spanStartIndex += text.length;
     }
   }
   getCursorPosition() {

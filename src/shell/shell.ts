@@ -229,19 +229,8 @@ export const shell: Program = async function* (
   };
 
   function onKey(e: KeyboardEvent) {
-    // if (this.terminal.isOpen) {
-    //   this.terminal.onKeyCallback(e);
-    //   e.preventDefault();
-    //   return;
-    // }
-
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       input.write(e.key);
-      // this.inputText =
-      //   this.inputText.slice(0, this.cursorPos) +
-      //   e.key +
-      //   this.inputText.slice(this.cursorPos);
-      // this.cursorPos++;
     } else if (e.ctrlKey && e.key === "v") {
       navigator.clipboard.readText().then((text) => input.write(text));
     } else if (e.key === "Backspace") {
