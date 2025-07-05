@@ -1,6 +1,6 @@
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
-export const envCommand: ShellCommand = async function* (
+export const envCommand: Program = async function* (
   stdin,
   args,
   { variables, std: { out } }

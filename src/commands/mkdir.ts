@@ -1,17 +1,10 @@
-import { handleError } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
-export const makeDirectoryCommand: ShellCommand = async function* (
+export const makeDirectoryCommand: Program = async function* (
   stdin,
   args,
   { fs: { createDirectory } }
 ) {
-  try {
-    createDirectory(args[0]);
-    return 0;
-  } catch (e: any) {
-    yield handleError(e);
-  }
-
-  return 1;
+  createDirectory(args[0]);
+  return 0;
 };

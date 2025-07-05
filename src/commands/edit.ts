@@ -1,7 +1,7 @@
+import { Program } from "../core/types";
 import { FileNode } from "../disk/types";
-import { ShellCommand } from "../shell/types";
 
-export const editCommand: ShellCommand = async function* (
+export const editCommand: Program = async function* (
   stdin,
   args,
   { std: { out }, fs: { open, createFile }, tryBindTerminal }

@@ -1,8 +1,8 @@
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
 const matchColor = "magenta"; // todo config main color etc in shell?
 
-export const grepCommand: ShellCommand = async function* (
+export const grepCommand: Program = async function* (
   stdin,
   args,
   { parseArgs, std: { out, err }, isStdoutToConsole, color }

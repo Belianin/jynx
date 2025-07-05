@@ -1,7 +1,7 @@
+import { Program } from "../core/types";
 import { err } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
 
-export const changeDirectoryCommand: ShellCommand = async function* (
+export const changeDirectoryCommand: Program = async function* (
   stdin,
   args,
   { fs: { changeWorkingDirectory } }

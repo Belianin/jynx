@@ -1,17 +1,17 @@
+import { Program } from "../core/types";
 import { FileNode } from "../disk/types";
-import { err, handleError, out } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
+import { err, out } from "../shell/shell";
 
 export const sourcesList = "/sys/etc/apt/sources";
 export const defaultSources = "/public/repository\n";
 
 export interface CommandModule {
-  default: ShellCommand;
+  default: Program;
   manifestVersion: string;
 }
 
-export const aptCommand: ShellCommand = async function* (stdin, args, { fs }) {
-  const command = args[0];
+export const aptCommand: Program = async function* (stdin, args, { fs }) {
+  const commandName = args[0];
   const name = args[1];
 
   const sourcesFile = fs.open(sourcesList) as FileNode;
@@ -30,15 +30,9 @@ export const aptCommand: ShellCommand = async function* (stdin, args, { fs }) {
     return 1;
   }
 
-  try {
-    const command = module.default;
-    fs.makeSysFile(`/usr/bin/${name}`, command);
-    return 0;
-  } catch (e: any) {
-    yield handleError(e);
-  }
-
-  return 1;
+  const command = module.default;
+  fs.makeSysFile(`/usr/bin/${name}`, command);
+  return 0;
 };
 
 const findModule = async (

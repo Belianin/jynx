@@ -1,7 +1,7 @@
+import { Program } from "../core/types";
 import { isFile } from "../disk/types";
-import { ShellCommand } from "../shell/types";
 
-export const catCommand: ShellCommand = async function* (
+export const catCommand: Program = async function* (
   stdin,
   args,
   { std: { out }, fs: { open } }

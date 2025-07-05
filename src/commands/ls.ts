@@ -1,9 +1,8 @@
+import { Program } from "../core/types";
 import { isFile, isFolder } from "../disk/types";
-import { handleError } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
 
 const fileColor = "yellow";
-export const listDirectoryCommand: ShellCommand = async function* (
+export const listDirectoryCommand: Program = async function* (
   stdin,
   args,
   {
@@ -18,78 +17,73 @@ export const listDirectoryCommand: ShellCommand = async function* (
   const { flags, positional } = parseArgs(args);
   const isColored =
     flags["color"] !== "false" && (isStdoutToConsole || flags["color"]);
-  try {
-    const path = positional[0] || PWD;
-    const folder = open(path);
-    if (!folder) {
-      out(`${path} not found`);
-      return 1;
-    }
-    if (!isFolder(folder)) {
-      out(`${path} is not a folder`);
-      return 1;
-    }
 
-    const items = folder.children.filter(
-      (x) => !x.name.startsWith(".") || flags["a"]
-    );
-
-    if (flags["l"]) {
-      const colWidths = [0, 0, 0, 0, 0, 0, 0];
-
-      const rows: string[][] = [];
-
-      // let maxSizeSize = 0
-      for (let item of items) {
-        const row: string[] = [
-          `${item.type}${item.permissions}`,
-          "0",
-          item.owner,
-          item.ownerGroup,
-          isFile(item) ? item.content.length.toString() : "0",
-          formatDate(item.created),
-          item.name,
-        ];
-        for (let i = 0; i < row.length; i++) {
-          const colWidth = row[i].length;
-          if (colWidths[i] < colWidth) colWidths[i] = colWidth;
-        }
-        rows.push(row);
-        // const size =
-      }
-
-      // печатаем с выравниванием
-      for (const [row, j] of rows.map(
-        (row, j) => [row, j] as [string[], number]
-      )) {
-        const line = row
-          .map((val, i) => {
-            const padded = i !== 0 ? val.padStart(colWidths[i] + 1) : val;
-            if (isColored && items[j].type === "-" && i === row.length - 1)
-              return color[fileColor](padded);
-            return padded;
-          })
-          .join("");
-        yield out(line);
-      }
-
-      return 0;
-    } else {
-      yield out(
-        items
-          .map((x) => {
-            if (x.type === "-" && isColored) return color[fileColor](x.name);
-            return x.name;
-          })
-          .join("\t")
-      );
-      return 0;
-    }
-  } catch (e: any) {
-    yield handleError(e);
+  const path = positional[0] || PWD;
+  const folder = open(path);
+  if (!folder) {
+    out(`${path} not found`);
+    return 1;
+  }
+  if (!isFolder(folder)) {
+    out(`${path} is not a folder`);
+    return 1;
   }
 
-  return 1;
+  const items = folder.children.filter(
+    (x) => !x.name.startsWith(".") || flags["a"]
+  );
+
+  if (flags["l"]) {
+    const colWidths = [0, 0, 0, 0, 0, 0, 0];
+
+    const rows: string[][] = [];
+
+    // let maxSizeSize = 0
+    for (let item of items) {
+      const row: string[] = [
+        `${item.type}${item.permissions}`,
+        "0",
+        item.owner,
+        item.ownerGroup,
+        isFile(item) ? item.content.length.toString() : "0",
+        formatDate(item.created),
+        item.name,
+      ];
+      for (let i = 0; i < row.length; i++) {
+        const colWidth = row[i].length;
+        if (colWidths[i] < colWidth) colWidths[i] = colWidth;
+      }
+      rows.push(row);
+      // const size =
+    }
+
+    // печатаем с выравниванием
+    for (const [row, j] of rows.map(
+      (row, j) => [row, j] as [string[], number]
+    )) {
+      const line = row
+        .map((val, i) => {
+          const padded = i !== 0 ? val.padStart(colWidths[i] + 1) : val;
+          if (isColored && items[j].type === "-" && i === row.length - 1)
+            return color[fileColor](padded);
+          return padded;
+        })
+        .join("");
+      yield out(line);
+    }
+
+    return 0;
+  } else {
+    yield out(
+      items
+        .map((x) => {
+          if (x.type === "-" && isColored) return color[fileColor](x.name);
+          return x.name;
+        })
+        .join("\t")
+    );
+    return 0;
+  }
 };
 
 function formatDate(date: Date) {

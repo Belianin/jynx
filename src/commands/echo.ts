@@ -1,6 +1,6 @@
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
-export const echoCommand: ShellCommand = async function* echoCommand(
+export const echoCommand: Program = async function* echoCommand(
   stdin,
   args,
   { std: { out } }

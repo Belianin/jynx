@@ -58,7 +58,7 @@ body {
   color: #ccc;
   padding: 10px;
   font-family: monospace;
-  white-space: pre-wrap;
+  white-space: pre;
   overflow-y: auto;
   height: 400px;
   width: 800px;
@@ -86,4 +86,8 @@ body {
 .cursor {
   color: white;
   animation: blink 1s step-start infinite;
+}
+
+.rendered-text {
+  margin: 0;
 }

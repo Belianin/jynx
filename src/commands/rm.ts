@@ -1,17 +1,10 @@
-import { handleError } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
-export const removeFile: ShellCommand = async function* (
+export const removeFile: Program = async function* (
   stdin,
   args,
   { fs: { remove } }
 ) {
-  try {
-    remove(args[0]);
-    return 0;
-  } catch (e: any) {
-    yield handleError(e);
-  }
-
-  return 1;
+  remove(args[0]);
+  return 0;
 };
