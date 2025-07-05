@@ -248,6 +248,76 @@ export class Jynx implements Core {
   }
 }
 
+interface LineInput {
+  value: string;
+  cursorPos: number;
+  write(value: string): void;
+  remove(value: string): void;
+  moveCursor(delta: number): void;
+  moveCursorToStart(): void;
+  moveCursorToEnd(): void;
+  setCursor(pos: number): void;
+}
+
+class HtmlLineInput implements LineInput {
+  value: string;
+  cursorPos: number;
+  terminal: Terminal;
+
+  startPos: { x: number; y: number };
+
+  constructor(termianl: Terminal) {
+    this.value = "";
+    this.cursorPos = 0;
+    this.terminal = termianl;
+    this.startPos = termianl.getCursorPosition();
+  }
+
+  write(value: string) {
+    this.terminal.write(value);
+    this.value += value;
+    this.cursorPos += value.length;
+  }
+  remove() {
+    if (this.cursorPos === 0) return;
+    this.cursorPos -= 1;
+    this.terminal.remove();
+    this.value =
+      this.value.substring(0, this.cursorPos - 1) +
+      this.value.substring(this.cursorPos);
+  }
+  removeAfterCursorLine() {
+    this.terminal.removeAfterCursorLine();
+    this.value = this.value.substring(0, this.cursorPos);
+  }
+  moveCursor(delta: number) {
+    this.cursorPos += delta;
+    if (this.cursorPos < 0) this.cursorPos = 0;
+
+    let linX = this.startPos.x + this.startPos.y * this.terminal.width; // todo свойство терминала
+    linX += this.cursorPos;
+
+    const x = linX % this.terminal.width;
+    const y = Math.floor(linX / this.terminal.width);
+    this.terminal.setCursorPosition(x, y);
+  }
+  moveCursorToStart() {
+    this.terminal.setCursorPosition(this.startPos.x, this.startPos.y);
+    this.cursorPos = 0;
+  }
+  moveCursorToEnd() {
+    console.log("Not implemented");
+    this.cursorPos = this.value.length;
+  }
+  setCursor(pos: number) {
+    console.log("Not implemented");
+    this.cursorPos = pos;
+    if (this.cursorPos < 0) this.cursorPos = 0;
+    else if (this.cursorPos > this.value.length)
+      this.cursorPos = this.value.length;
+  }
+}
+
 export const shell: ShellCommand = async function* (
   stdin,
   args,
@@ -260,9 +330,9 @@ export const shell: ShellCommand = async function* (
   const history: string[] = [];
   let historyCounter: number = 0;
 
-  const prefix = "/home/guest";
+  const prefix = "guest@localhost:/home/guest ";
 
-  terimal.write("/home/guest");
+  terimal.write(prefix);
 
   function getHistoryCommand(delta: number) {
     historyCounter += delta;
@@ -276,11 +346,13 @@ export const shell: ShellCommand = async function* (
     return history[history.length - historyCounter - 1] || "";
   }
 
+  let input = new HtmlLineInput(terimal);
+
   function writeHistoryCommand(delta: number) {
     const command = getHistoryCommand(delta);
-    terimal.setCursorPosition(prefix.length, undefined);
-    terimal.removeAfterCursorLine();
-    terimal.write(command);
+    input.moveCursorToStart();
+    input.removeAfterCursorLine();
+    input.write(command);
   }
 
   function onKey(e: KeyboardEvent) {
@@ -291,38 +363,40 @@ export const shell: ShellCommand = async function* (
     // }
 
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      input.write(e.key);
       // this.inputText =
       //   this.inputText.slice(0, this.cursorPos) +
       //   e.key +
       //   this.inputText.slice(this.cursorPos);
       // this.cursorPos++;
     } else if (e.ctrlKey && e.key === "v") {
-      navigator.clipboard.readText().then((text) => terimal.write(text));
+      navigator.clipboard.readText().then((text) => input.write(text));
     } else if (e.key === "Backspace") {
-      const { x } = terimal.getCursorPosition();
-      if (x > prefix.length) terimal.remove();
+      input.remove();
     } else if (e.key === "Delete") {
-      const { x } = terimal.getCursorPosition();
-      if (x > prefix.length) terimal.remove();
+      input.remove(); // удаляется не то
     } else if (e.key === "ArrowLeft") {
-      // переход на новую строку, ограничить длинной строки веедённой
-      const { x } = terimal.getCursorPosition();
-      if (x > prefix.length) terimal.setCursorPosition(x - 1, undefined);
+      input.moveCursor(-1);
     } else if (e.key === "ArrowRight") {
-      const { x } = terimal.getCursorPosition();
-      terimal.setCursorPosition(x + 1, undefined);
+      input.moveCursor(1);
     } else if (e.key === "ArrowUp") {
       writeHistoryCommand(1);
     } else if (e.key === "ArrowDown") {
       writeHistoryCommand(-1);
     } else if (e.key === "Enter") {
-      terimal.write("\n");
+      const result = input.value;
+      if (result !== "") {
+        terimal.write(`\nLaunching: ${result}...`);
+        history.push(input.value);
+      }
+      terimal.write(`\n${prefix}`);
+      input = new HtmlLineInput(terimal); // todo перенести в аргументы
     }
   }
 
-  isBinded.onKey(onKey);
+  terimal.onKey(onKey);
 
-  await isBinded.closed();
+  await terimal.closed();
 
   return 0;
 };
@@ -335,8 +409,15 @@ export class HtmlTerminal implements Terminal {
   onKeyCallback: KeyHandler;
 
   parent: HTMLElement;
-  cursor: { x: number; y: number };
+  cursorPos: { x: number; y: number };
+  linPos: number;
   // inputElement: ShellInput;
+
+  cursor: HTMLSpanElement;
+  prev: Text;
+  next: Text;
+
+  width: number; // todo real
 
   constructor(parent: HTMLElement) {
     this.isOpen = false;
@@ -346,16 +427,46 @@ export class HtmlTerminal implements Terminal {
     this.resolveСlosedTermialPromise = () => {};
     this.parent = parent;
     // this.inputElement = new ShellInput(parent);
-    this.cursor = { x: 0, y: 0 };
+    this.cursorPos = { x: 0, y: 0 };
+
+    this.cursor = document.createElement("span");
+    this.cursor.classList.add("cursor");
+    this.cursor.textContent = "█";
+    this.prev = document.createTextNode("");
+    this.next = document.createTextNode("");
+    parent.appendChild(this.prev);
+    parent.appendChild(this.cursor);
+    parent.appendChild(this.next);
 
     parent.addEventListener("keydown", (e) => {
       e.preventDefault();
       this.onKeyCallback(e); // todo а не сломается ли
     });
+
+    this.width = 400;
+    this.linPos = 0;
   }
 
-  remove() {}
-  removeAfterCursorLine() {}
+  remove() {
+    if (this.prev.textContent.length > 0) {
+      this.prev.textContent = this.prev.textContent.substring(
+        0,
+        this.prev.textContent.length - 1
+      );
+
+      this.linPos = this.linPos - 1; // todo копипаста
+      this.cursorPos.x = this.linPos % this.width;
+      this.cursorPos.y = Math.floor(this.linPos / this.width);
+    }
+  }
+  removeAfterCursorLine() {
+    const newLine = this.next.textContent.indexOf("\n");
+    if (newLine !== -1) {
+      this.next.textContent = this.next.textContent.substring(0, newLine);
+    } else {
+      this.next.textContent = "";
+    }
+  }
 
   close() {
     if (!this.isOpen) return;
@@ -369,7 +480,28 @@ export class HtmlTerminal implements Terminal {
     return this.buffer;
   }
   write(value: string) {
-    this.parent.textContent += value; // todo
+    // const newContent = this.parent.childNodes[0];
+    // newContent.textContent = newContent.textContent + value;
+
+    this.linPos += value.length; // todo копипаста
+    this.cursorPos.x = this.linPos % this.width;
+    this.cursorPos.y = Math.floor(this.linPos / this.width);
+
+    this.prev.textContent = this.prev.textContent + value;
+
+    // const frag = document.createDocumentFragment();
+    // const newContent = this.parent.childNodes[0];
+    // newContent.textContent = newContent.textContent + value;
+
+    // frag.appendChild(newContent);
+    // frag.appendChild(this.cursor);
+    // frag.appendChild(this.parent.childNodes[2]);
+
+    // this.parent.textContent = "";
+    // this.parent.appendChild(frag);
+
+    // this.cursor.insertBefore(this.parent, document.createTextNode("value")); // todo insertBefore?
+    // this.parent.textContent += value; // todo
     this.buffer += value;
   }
   onKey(callback: KeyHandler) {
@@ -380,14 +512,33 @@ export class HtmlTerminal implements Terminal {
     return this.closedTermialPromise;
   }
   clear() {
-    this.parent.textContent = "";
+    this.prev.textContent = "";
+    this.next.textContent = "";
+    this.linPos = 0;
+    this.cursorPos = { x: 0, y: 0 };
     this.buffer = "";
   }
   setCursorPosition(x: number | undefined, y: number | undefined) {
-    this.cursor = { x: x || this.cursor.x, y: y || this.cursor.y }; // todo баг с нулём
+    this.cursorPos = {
+      x: x === undefined ? this.cursorPos.x : x,
+      y: y === undefined ? this.cursorPos.y : y,
+    };
+    this.linPos = this.cursorPos.x + this.cursorPos.y * this.width;
+
+    const prevText = this.prev.textContent;
+    if (prevText.length > this.linPos) {
+      this.prev.textContent = prevText.substring(0, this.linPos);
+      this.next.textContent =
+        prevText.substring(this.linPos) + this.next.textContent;
+    } else {
+      const nextText = this.next.textContent;
+      const index = this.linPos - prevText.length;
+      this.prev.textContent = prevText + nextText.substring(0, index);
+      this.next.textContent = nextText.substring(index);
+    }
   }
   getCursorPosition() {
-    return this.cursor;
+    return { ...this.cursorPos };
   }
 }
 
@@ -438,7 +589,7 @@ export class Shell {
       onKeyCallback: () => {},
       closedTermialPromise: null,
       resolveСlosedTermialPromise: () => {},
-
+      width: 0,
       close() {
         if (!this.isOpen) return;
         this.isOpen = false;
