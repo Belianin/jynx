@@ -1,7 +1,7 @@
 import { DiskNode, FileNode, FolderNode } from "../disk/types";
 import { ParsedArgs } from "./parsing";
 import { Color } from "./print";
-import { KeyHandler } from "./shell";
+import { Core, KeyHandler } from "./shell";
 
 export type StreamEvent = {
   type: "stdout" | "stderr";
@@ -50,6 +50,7 @@ export type ShellContext = {
     getPathTo: (path: string) => string;
     makeSysFile: (path: string, command: ShellCommand) => void; // todo удалить
   };
+  core: Core;
   isStdoutToConsole: boolean;
   parseArgs: (args: string[]) => ParsedArgs;
   std: {

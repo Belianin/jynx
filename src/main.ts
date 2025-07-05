@@ -1,5 +1,5 @@
 import { createDefaultImage } from "./disk/image";
-import { Core, HtmlTerminal, Jynx, shell } from "./shell/shell";
+import { Core, emptyStdin, HtmlTerminal, Jynx, shell } from "./shell/shell";
 
 export const consoleElement = document.getElementById(
   "console"
@@ -15,6 +15,6 @@ consoleElement.addEventListener("click", () => consoleElement.focus());
 const fsImage = createDefaultImage();
 const fs = fsImage.createFs();
 const jynx: Core = new Jynx(fs, new HtmlTerminal(consoleElement));
-jynx.run(shell, [], true, {});
+jynx.run(emptyStdin(), shell, [], true, {});
 // const shell = new Shell(consoleElement, (callback) => (onKey = callback), fs);
 // shell.run();

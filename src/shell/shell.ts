@@ -136,10 +136,12 @@ export type ProcessContext = {
 export interface Core {
   processes: Record<number, Process>;
   run: (
+    stdin: AsyncIterable<string>,
     command: ShellCommand,
     args: string[],
     isStdoutToConsole: boolean,
-    variables: Record<string, string>
+    variables: Record<string, string>,
+    onStd?: (value: number | StreamEvent) => void
   ) => Process;
 }
 
@@ -157,10 +159,12 @@ export class Jynx implements Core {
   }
 
   run(
+    stdin: AsyncIterable<string>,
     command: ShellCommand,
     args: string[],
     isStdoutToConsole: boolean,
-    variables: Record<string, string>
+    variables: Record<string, string>,
+    onStd?: (value: number | StreamEvent) => void
   ) {
     let processId = this.lastProcessId;
     const process: Process = {
@@ -192,9 +196,10 @@ export class Jynx implements Core {
     };
 
     this.processes[processId] = process;
-    const iterator = command(emptyStdin(), args, {
+    const iterator = command(stdin, args, {
       color: colorToConvert,
       isStdoutToConsole,
+      core: this,
       fs: {
         open: (path: string) => this.fs.find(getPathTo(path)),
         remove: (path: string) => this.fs.remove(getPathTo(path)),
@@ -224,6 +229,7 @@ export class Jynx implements Core {
 
     function iterate() {
       iterator.next().then(({ done, value }) => {
+        onStd?.(value);
         if (!done) {
           // обработка value, если нужна
           iterate(); // рекурсивно продолжаем
@@ -332,7 +338,7 @@ class HtmlLineInput implements LineInput {
 export const shell: ShellCommand = async function* (
   stdin,
   args,
-  { tryBindTerminal, fs }
+  { tryBindTerminal, fs, core }
 ) {
   const isBinded = tryBindTerminal();
   if (!isBinded) throw new Error("Faield to bind terminal");
@@ -489,55 +495,35 @@ export const shell: ShellCommand = async function* (
           PWD: CURRENT_DIR,
         };
 
-        const getPathTo = (path: string) => {
-          const parts = path.startsWith("/")
-            ? [""]
-            : CURRENT_DIR === "/"
-            ? [""]
-            : CURRENT_DIR.split("/");
-
-          // Разбиваем path по / и обрабатываем каждый элемент
-          path.split("/").forEach((segment) => {
-            if (segment === "..") {
-              if (parts.length > 1) {
-                parts.pop();
-              }
-            } else if (segment !== "" && segment !== ".") {
-              parts.push(segment);
+        let resolve: () => void = () => {};
+        const onStd = (event: StreamEvent | number) => {
+          if (typeof event === "number") {
+            if ("close" in stdout) {
+              stdout.close();
             }
-          });
-
-          // Собираем финальный путь
-          return parts.join("/") || "/";
-        };
-
-        const context: ShellContext = {
-          color: colorToConvert,
-          isStdoutToConsole: !stdoutRedirect && i === commands.length - 1,
-          fs,
-          tryBindTerminal,
-          parseArgs,
-          std: {
-            out,
-            err,
-          },
-          variables: procVariables,
-          changeDirectory: (path: string) => changeCurrentDir(path),
-        };
-        const gen = command(stdin, args, context);
-        for await (const event of gen) {
-          if (event.type === "stdout") {
-            stdout.write(event.data);
+            if ("close" in stderr) {
+              stderr.close();
+            }
+            resolve();
           } else {
-            stderr.write(event.data);
+            if (event.type === "stdout") {
+              stdout.write(event.data);
+            } else {
+              stderr.write(event.data);
+            }
           }
-        }
-        if ("close" in stdout) {
-          stdout.close();
-        }
-        if ("close" in stderr) {
-          stderr.close();
-        }
+        };
+
+        core.run(
+          stdin,
+          command,
+          args,
+          !stdoutRedirect && i === commands.length - 1,
+          procVariables,
+          onStd
+        );
+
+        return new Promise<void>((res) => (resolve = res));
       })();
     });
 
@@ -1126,6 +1112,7 @@ export class Shell {
         };
 
         const context: ShellContext = {
+          core: null as any,
           color: colorToConvert,
           isStdoutToConsole: !stdoutRedirect && i === commands.length - 1,
           fs: {
