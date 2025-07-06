@@ -8,7 +8,7 @@ import { Stream, WritableStreamLike } from "./types";
 export const shell: Program = async function* (
   stdin,
   args,
-  { tryBindTerminal, fs, core }
+  { tryBindTerminal, fs, core, color }
 ) {
   const isBinded = tryBindTerminal();
   if (!isBinded) throw new Error("Faield to bind terminal");
@@ -203,7 +203,9 @@ export const shell: Program = async function* (
   const history: string[] = [];
   let historyCounter: number = 0;
 
-  const prefix = "guest@localhost:/home/guest ";
+  const prefix = `${color["red"]("guest@localhost")}:${color["yellow"](
+    "/home/guest"
+  )} `;
 
   terimal.write(prefix);
 

@@ -1,4 +1,5 @@
 import { LineInput, Terminal } from "./types";
+import { removeCsi } from "./utils";
 
 export class HtmlLineInput implements LineInput {
   value: string;
@@ -15,18 +16,24 @@ export class HtmlLineInput implements LineInput {
   }
 
   write(value: string) {
+    // todo remove CSI when saving buffer
     if (this.value === "" || this.cursorPos === this.value.length) {
       this.terminal.write(value);
+      const cleared = removeCsi(value);
       this.value =
         this.value.substring(0, this.cursorPos) +
-        value +
+        cleared +
         this.value.substring(this.cursorPos);
-      this.cursorPos += value.length;
+      this.cursorPos += cleared.length;
     } else {
+      this.terminal.write(value);
       const toRewrite = this.value.substring(this.cursorPos);
-      this.terminal.write(value + toRewrite);
-      this.value = this.value.substring(0, this.cursorPos) + value + toRewrite;
-      this.cursorPos += value.length + toRewrite.length;
+      this.terminal.write(toRewrite);
+
+      const cleared = removeCsi(value);
+      this.value =
+        this.value.substring(0, this.cursorPos) + cleared + toRewrite;
+      this.cursorPos += cleared.length + toRewrite.length;
       this.moveCursor(-toRewrite.length);
     }
     console.log("$" + this.value + "$");
@@ -48,6 +55,7 @@ export class HtmlLineInput implements LineInput {
   moveCursor(delta: number) {
     console.log(this.value);
     this.cursorPos += delta;
+    if (this.cursorPos > this.value.length) return;
     if (this.cursorPos < 0) this.cursorPos = 0;
 
     let linX = this.startPos.x + this.startPos.y * this.terminal.width; // todo свойство терминала

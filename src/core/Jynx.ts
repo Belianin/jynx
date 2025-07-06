@@ -3,8 +3,8 @@ import { changeCurrentDir } from "../shell/env";
 import { parseArgs } from "../shell/parsing";
 import { colorToConvert } from "../shell/print";
 import { err, out } from "../shell/shell";
-import { Core, Process, ShellCommand, StreamEvent } from "../shell/types";
-import { HtmlTerminal } from "../terminal/HtmlTerminal";
+import HtmlTerminal from "../terminal/HtmlTerminal";
+import { Core, Process, Program, StreamEvent } from "./types";
 
 export class Jynx implements Core {
   processes: Record<number, Process>;
@@ -21,7 +21,7 @@ export class Jynx implements Core {
 
   run(
     stdin: AsyncIterable<string>,
-    command: ShellCommand,
+    command: Program,
     args: string[],
     isStdoutToConsole: boolean,
     variables: Record<string, string>,
@@ -75,7 +75,7 @@ export class Jynx implements Core {
             changeCurrentDir(path);
           // else this.print("Path to found\n"); // todo
         },
-        makeSysFile: (path: string, command: ShellCommand) =>
+        makeSysFile: (path: string, command: Program) =>
           this.fs.makeSysFile(getPathTo(path), command),
       },
       tryBindTerminal: this.bindTerminal.bind(this),

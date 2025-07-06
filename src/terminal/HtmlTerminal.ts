@@ -1,4 +1,11 @@
 import { KeyHandler, Terminal } from "./types";
+import {
+  applyStyleCommand,
+  classesMatch,
+  getStyleClasses,
+  parseText,
+  StlyeState,
+} from "./utils";
 
 export default class HtmlTerminal implements Terminal {
   isOpen: boolean;
@@ -6,6 +13,8 @@ export default class HtmlTerminal implements Terminal {
   closedTermialPromise: Promise<void> | null;
   resolveСlosedTermialPromise: () => void;
   onKeyCallback: KeyHandler;
+
+  stylesStyle: StlyeState;
 
   parent: HTMLElement;
   cursorPos: { x: number; y: number };
@@ -29,6 +38,7 @@ export default class HtmlTerminal implements Terminal {
     this.parent = parent;
     // this.inputElement = new ShellInput(parent);
     this.cursorPos = { x: 0, y: 0 };
+    this.stylesStyle = {};
 
     this.cursor = document.createElement("span");
     this.cursor.classList.add("cursor");
@@ -108,31 +118,54 @@ export default class HtmlTerminal implements Terminal {
   getBuffer() {
     return this.buffer;
   }
+  _createStyledNode() {
+    if (Object.keys(this.stylesStyle).length === 0) {
+      return document.createTextNode("");
+    } // а если задать false?
+    const span = document.createElement("span");
+    const classes = getStyleClasses(this.stylesStyle);
+    for (let className of classes) span.classList.add(className);
+    return span;
+  }
   write(value: string) {
-    let prev = this.cursor.previousSibling;
-    if (!prev) {
-      prev = document.createTextNode("");
-      this.parent.insertBefore(prev, this.cursor); // todo цвет
-    }
-    prev.textContent = prev.textContent + value;
+    const tokens = parseText(value);
 
-    // Inserting
-    let lengthLeft = value.length;
-    let next = this.cursor.nextSibling;
-    while (next && lengthLeft > 0) {
-      const nextText = next.textContent || "";
-      const lengthToCut = Math.min(nextText.length, lengthLeft);
-      const newNextText = nextText.substring(lengthToCut);
-      next.textContent = newNextText;
-      lengthLeft -= lengthToCut;
-      if (newNextText.length === 0) next.remove();
-      next = next.nextSibling;
-    }
+    for (let token of tokens) {
+      if (typeof token === "string") {
+        let prev = this.cursor.previousSibling;
+        if (!prev) {
+          prev = this._createStyledNode();
+          this.parent.insertBefore(prev, this.cursor);
+        } else {
+          const classes = getStyleClasses(this.stylesStyle);
+          if (!classesMatch(prev, classes)) {
+            prev = this._createStyledNode();
+            this.parent.insertBefore(prev, this.cursor);
+          }
+        }
+        prev.textContent = prev.textContent + token;
 
-    this.linPos += value.length; // todo копипаста
-    this.cursorPos.x = this.linPos % this.width;
-    this.cursorPos.y = Math.floor(this.linPos / this.width);
-    this.buffer += value;
+        // Inserting
+        let lengthLeft = token.length;
+        let next = this.cursor.nextSibling;
+        while (next && lengthLeft > 0) {
+          const nextText = next.textContent || "";
+          const lengthToCut = Math.min(nextText.length, lengthLeft);
+          const newNextText = nextText.substring(lengthToCut);
+          next.textContent = newNextText;
+          lengthLeft -= lengthToCut;
+          if (newNextText.length === 0) next.remove();
+          next = next.nextSibling;
+        }
+
+        this.linPos += token.length; // todo копипаста
+        this.cursorPos.x = this.linPos % this.width;
+        this.cursorPos.y = Math.floor(this.linPos / this.width);
+        this.buffer += token;
+      } else {
+        this.stylesStyle = applyStyleCommand(this.stylesStyle, token);
+      }
+    }
   }
   onKey(callback: KeyHandler) {
     this.onKeyCallback = callback;
