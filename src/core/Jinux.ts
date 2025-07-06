@@ -6,7 +6,7 @@ import { err, out } from "../shell/shell";
 import HtmlTerminal from "../terminal/HtmlTerminal";
 import { Core, Process, Program, StreamEvent } from "./types";
 
-export class Jynx implements Core {
+export class Jinux implements Core {
   processes: Record<number, Process>;
   lastProcessId: number;
   fs: Disk;

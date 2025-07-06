@@ -1,4 +1,4 @@
-import { Jynx } from "./core/Jynx";
+import { Jinux } from "./core/Jinux";
 import { Core } from "./core/types";
 import { createDefaultImage } from "./disk/image";
 import { emptyStdin, shell } from "./shell/shell";
@@ -10,5 +10,5 @@ consoleElement.addEventListener("click", () => consoleElement.focus());
 
 const fsImage = createDefaultImage();
 const fs = fsImage.createFs();
-const jynx: Core = new Jynx(fs, new HtmlTerminal(consoleElement));
+const jynx: Core = new Jinux(fs, new HtmlTerminal(consoleElement));
 jynx.run(emptyStdin(), shell, [], true, {});
