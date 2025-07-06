@@ -3,8 +3,8 @@ export interface Terminal {
   getBuffer: () => string;
   write: (value: string) => void;
   remove: () => void;
-  close: () => void;
-  onKey: (callback: KeyHandler) => void;
+  close: (id: number) => void;
+  onKey: (id: number, callback: KeyHandler) => void;
   closed: () => Promise<void>;
   clear: () => void;
   getCursorPosition: () => {

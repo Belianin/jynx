@@ -37,12 +37,14 @@ export type ShellContext = {
   variables: Record<string, string>;
   changeDirectory: (path: string) => void;
   tryBindTerminal: () => Terminal | undefined;
+  id: number;
 };
 
 export type Process = {
   id: number;
   command: Program;
   workingDirectory: string;
+  closed(): Promise<void>; // todo number
 };
 
 export type ProcessContext = {
@@ -54,6 +56,7 @@ export type ProcessContext = {
 export interface Core {
   processes: Record<number, Process>;
   run: (
+    // todo parentProcessId
     stdin: AsyncIterable<string>,
     command: Program,
     args: string[],

@@ -27,11 +27,16 @@ export class Jynx implements Core {
     variables: Record<string, string>,
     onStd?: (value: number | StreamEvent) => void
   ) {
-    let processId = this.lastProcessId;
+    let processId = ++this.lastProcessId;
+    let resolve = () => {};
+    const closed = new Promise<void>((res) => {
+      resolve = res;
+    });
     const process: Process = {
       id: processId,
       command,
       workingDirectory: "/home/guest", // todo
+      closed: () => closed,
     };
 
     const getPathTo = (path: string) => {
@@ -85,6 +90,7 @@ export class Jynx implements Core {
         err,
       },
       variables,
+      id: processId,
       changeDirectory: (path: string) => (process.workingDirectory = path), // todo validate
     });
 
@@ -93,6 +99,7 @@ export class Jynx implements Core {
         onStd?.(value);
         if (done) {
           delete this.processes[processId];
+          resolve();
         } else {
           iterate();
         }
@@ -104,7 +111,9 @@ export class Jynx implements Core {
   }
 
   bindTerminal() {
-    if (this.terminal.isOpen) return;
+    // if (this.terminal.isOpen) {
+    //   this.terminal.close();
+    // }
     // this.terminal.clear(); // todo не уверен что всегда нужно
     // this.input.hide();
     this.terminal.isOpen = true;

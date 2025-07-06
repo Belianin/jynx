@@ -8,7 +8,7 @@ import { Stream, WritableStreamLike } from "./types";
 export const shell: Program = async function* (
   stdin,
   args,
-  { tryBindTerminal, fs, core, color }
+  { tryBindTerminal, fs, core, color, id }
 ) {
   const isBinded = tryBindTerminal();
   if (!isBinded) throw new Error("Faield to bind terminal");
@@ -70,7 +70,7 @@ export const shell: Program = async function* (
     }
 
     try {
-      await runPipeline(commandsToExecute);
+      await runPipeline(commandsToExecute); // todo process closed;
     } catch (e: any) {
       if (e instanceof Error) terimal.write(e.message + "\n");
       else terimal.write("Internal problem\n");
@@ -230,7 +230,9 @@ export const shell: Program = async function* (
     input.write(command);
   };
 
+  let executing = false;
   function onKey(e: KeyboardEvent) {
+    if (executing) return;
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
       input.write(e.key);
     } else if (e.ctrlKey && e.key === "v") {
@@ -253,9 +255,11 @@ export const shell: Program = async function* (
       if (result !== "") {
         terimal.write("\n");
         history.push(result);
+        executing = true;
         execute(result).then((x) => {
           terimal.write(prefix);
           input = new HtmlLineInput(terimal); // todo перенести в аргументы
+          executing = false;
         });
       } else {
         terimal.write(`\n${prefix}`);
@@ -264,9 +268,14 @@ export const shell: Program = async function* (
     }
   }
 
-  terimal.onKey(onKey);
+  terimal.onKey(id, onKey);
 
-  await terimal.closed();
+  let resolve = () => {};
+  const closed = new Promise<void>((res) => (resolve = res));
+
+  await closed;
+
+  // await terimal.closed();
 
   return 0;
 };

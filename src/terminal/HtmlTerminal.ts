@@ -12,7 +12,7 @@ export default class HtmlTerminal implements Terminal {
   buffer: string;
   closedTermialPromise: Promise<void> | null;
   resolveСlosedTermialPromise: () => void;
-  onKeyCallback: KeyHandler;
+  listeners: Record<number, KeyHandler>;
 
   stylesStyle: StlyeState;
 
@@ -32,7 +32,7 @@ export default class HtmlTerminal implements Terminal {
   constructor(parent: HTMLElement) {
     this.isOpen = false;
     this.buffer = "";
-    this.onKeyCallback = () => {};
+    this.listeners = {};
     this.closedTermialPromise = null;
     this.resolveСlosedTermialPromise = () => {};
     this.parent = parent;
@@ -61,7 +61,7 @@ export default class HtmlTerminal implements Terminal {
 
     parent.addEventListener("keydown", (e) => {
       e.preventDefault();
-      this.onKeyCallback(e); // todo а не сломается ли
+      for (let lisneter of Object.values(this.listeners)) lisneter(e); // todo а не сломается ли
     });
 
     this.width = 400;
@@ -107,13 +107,14 @@ export default class HtmlTerminal implements Terminal {
     }
   }
 
-  close() {
-    if (!this.isOpen) return;
-    this.isOpen = false;
-    this.buffer = "";
-    this.onKeyCallback = () => {};
-    this.resolveСlosedTermialPromise();
-    this.resolveСlosedTermialPromise = () => {};
+  close(id: number) {
+    delete this.listeners[id];
+    // if (!this.isOpen) return;
+    // this.isOpen = false;
+    // this.buffer = "";
+    // this.onKeyCallback = () => {};
+    // this.resolveСlosedTermialPromise();
+    // this.resolveСlosedTermialPromise = () => {};
   }
   getBuffer() {
     return this.buffer;
@@ -167,8 +168,9 @@ export default class HtmlTerminal implements Terminal {
       }
     }
   }
-  onKey(callback: KeyHandler) {
-    this.onKeyCallback = callback;
+  onKey(id: number, callback: KeyHandler) {
+    this.listeners[id] = callback;
+    console.log(this.listeners);
   }
   closed() {
     if (!this.closedTermialPromise) throw new Error("Terminal not binded");
