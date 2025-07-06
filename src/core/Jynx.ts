@@ -88,15 +88,16 @@ export class Jynx implements Core {
       changeDirectory: (path: string) => (process.workingDirectory = path), // todo validate
     });
 
-    function iterate() {
+    const iterate = () => {
       iterator.next().then(({ done, value }) => {
         onStd?.(value);
-        if (!done) {
-          // обработка value, если нужна
-          iterate(); // рекурсивно продолжаем
+        if (done) {
+          delete this.processes[processId];
+        } else {
+          iterate();
         }
       });
-    }
+    };
     iterate();
 
     return process;
