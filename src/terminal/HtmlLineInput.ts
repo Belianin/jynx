@@ -15,12 +15,20 @@ export class HtmlLineInput implements LineInput {
   }
 
   write(value: string) {
-    this.terminal.write(value);
-    this.value =
-      this.value.substring(0, this.cursorPos) +
-      value +
-      this.value.substring(this.cursorPos);
-    this.cursorPos += value.length;
+    if (this.value === "" || this.cursorPos === this.value.length) {
+      this.terminal.write(value);
+      this.value =
+        this.value.substring(0, this.cursorPos) +
+        value +
+        this.value.substring(this.cursorPos);
+      this.cursorPos += value.length;
+    } else {
+      const toRewrite = this.value.substring(this.cursorPos);
+      this.terminal.write(value + toRewrite);
+      this.value = this.value.substring(0, this.cursorPos) + value + toRewrite;
+      this.cursorPos += value.length + toRewrite.length;
+      this.moveCursor(-toRewrite.length);
+    }
     console.log("$" + this.value + "$");
   }
   remove() {

@@ -116,6 +116,19 @@ export default class HtmlTerminal implements Terminal {
     }
     prev.textContent = prev.textContent + value;
 
+    // Inserting
+    let lengthLeft = value.length;
+    let next = this.cursor.nextSibling;
+    while (next && lengthLeft > 0) {
+      const nextText = next.textContent || "";
+      const lengthToCut = Math.min(nextText.length, lengthLeft);
+      const newNextText = nextText.substring(lengthToCut);
+      next.textContent = newNextText;
+      lengthLeft -= lengthToCut;
+      if (newNextText.length === 0) next.remove();
+      next = next.nextSibling;
+    }
+
     this.linPos += value.length; // todo копипаста
     this.cursorPos.x = this.linPos % this.width;
     this.cursorPos.y = Math.floor(this.linPos / this.width);
