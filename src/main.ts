@@ -10,5 +10,5 @@ consoleElement.addEventListener("click", () => consoleElement.focus());
 
 const fsImage = createDefaultImage();
 const fs = fsImage.createFs();
-const jynx: Core = new Jinux(fs, new HtmlTerminal(consoleElement));
-jynx.run(emptyStdin(), shell, [], true, {});
+const jinux: Core = new Jinux(fs, new HtmlTerminal(consoleElement));
+jinux.run(emptyStdin(), shell, [], true, {});

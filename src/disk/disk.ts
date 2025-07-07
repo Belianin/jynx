@@ -1,4 +1,4 @@
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 import {
   DiskNode,
   FileNode,
@@ -98,7 +98,7 @@ export class Disk {
   };
 
   // todo copyaster
-  makeSysFile = (path: string, command: ShellCommand) => {
+  makeSysFile = (path: string, command: Program) => {
     let current = this.root as FolderLikeNode;
     const parts = path.split("/");
     for (let i = 0; i < parts.length - 1; i++) {

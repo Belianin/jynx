@@ -1,4 +1,4 @@
-import { ShellCommand } from "../shell/types";
+import { Program } from "../core/types";
 
 export type NodeInfo = {
   permissions: string;
@@ -21,7 +21,7 @@ export type FileNode = NodeInfo & {
 export type ProgramFileNode = NodeInfo & {
   name: string;
   // todo content?
-  command: ShellCommand;
+  command: Program;
   parent: FolderLikeNode;
   type: "x";
 };

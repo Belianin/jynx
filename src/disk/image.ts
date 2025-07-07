@@ -9,15 +9,15 @@ import { grepCommand } from "../commands/grep";
 import { listDirectoryCommand } from "../commands/ls";
 import { makeDirectoryCommand } from "../commands/mkdir";
 import { removeFile } from "../commands/rm";
+import { Program } from "../core/types";
 import { CURRENT_DIR } from "../shell/env";
 import { envPath, sysProgramsPath, usrProgramsPath } from "../shell/shell";
-import { ShellCommand } from "../shell/types";
 import { Disk } from "./disk";
 
 export class FsImage {
   files: string[][];
   folders: string[];
-  commands: [string, ShellCommand][];
+  commands: [string, Program][];
 
   constructor() {
     this.files = [];
@@ -40,7 +40,7 @@ export class FsImage {
 export const createDefaultImage = () => {
   const result = new FsImage();
 
-  const commandToRegister: Record<string, ShellCommand> = {
+  const commandToRegister: Record<string, Program> = {
     echo: echoCommand,
     grep: grepCommand,
     cat: catCommand,
