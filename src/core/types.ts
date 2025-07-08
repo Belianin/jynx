@@ -22,7 +22,6 @@ export type ShellContext = {
     remove: (path: string) => void;
     createFile: (path: string) => FileNode | undefined;
     createDirectory: (path: string) => FolderNode | undefined;
-    changeWorkingDirectory: (path: string) => void;
     getPathTo: (path: string) => string;
     makeSysFile: (path: string, command: Program) => void; // todo удалить
   };
@@ -35,7 +34,8 @@ export type ShellContext = {
   };
   color: Record<Color, (text: string) => string>;
   variables: Record<string, string>;
-  changeDirectory: (path: string) => void;
+  getWorkingDirectory: () => string;
+  changeWorkingDirectory: (path: string) => void;
   tryBindTerminal: () => Terminal | undefined;
   id: number;
 };

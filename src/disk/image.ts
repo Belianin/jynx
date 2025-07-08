@@ -1,6 +1,5 @@
 import { aptCommand, defaultSources, sourcesList } from "../commands/apt";
 import { catCommand } from "../commands/cat";
-import { changeDirectoryCommand } from "../commands/cd";
 import { copyCommand } from "../commands/cp";
 import { echoCommand } from "../commands/echo";
 import { editCommand } from "../commands/edit";
@@ -10,7 +9,7 @@ import { listDirectoryCommand } from "../commands/ls";
 import { makeDirectoryCommand } from "../commands/mkdir";
 import { removeFile } from "../commands/rm";
 import { Program } from "../core/types";
-import { CURRENT_DIR } from "../shell/env";
+import { USERNAME } from "../shell/env";
 import { envPath, sysProgramsPath, usrProgramsPath } from "../shell/shell";
 import { Disk } from "./disk";
 
@@ -47,7 +46,6 @@ export const createDefaultImage = () => {
     mkdir: makeDirectoryCommand,
     ls: listDirectoryCommand,
     env: envCommand,
-    cd: changeDirectoryCommand,
     rm: removeFile,
     cp: copyCommand,
     apt: aptCommand,
@@ -62,7 +60,7 @@ export const createDefaultImage = () => {
     [envPath, `PATH=${sysProgramsPath};${usrProgramsPath}`],
     [sourcesList, defaultSources],
   ];
-  result.folders = [sysProgramsPath, usrProgramsPath, CURRENT_DIR];
+  result.folders = [sysProgramsPath, usrProgramsPath, `/home/${USERNAME}`];
 
   return result;
 };

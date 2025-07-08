@@ -1,14 +1,20 @@
 import { Program, StreamEvent } from "../core/types";
 import { HtmlLineInput } from "../terminal/HtmlLineInput";
-import { CURRENT_DIR, DOMAIN, USERNAME } from "./env";
 import { CommandToken, shellParse } from "./parsing";
-import { PrintableText } from "./print";
 import { Stream, WritableStreamLike } from "./types";
 
 export const shell: Program = async function* (
   stdin,
   args,
-  { tryBindTerminal, fs, core, color, id }
+  {
+    tryBindTerminal,
+    fs,
+    core,
+    color,
+    id,
+    getWorkingDirectory,
+    changeWorkingDirectory,
+  }
 ) {
   const isBinded = tryBindTerminal();
   if (!isBinded) throw new Error("Faield to bind terminal");
@@ -90,7 +96,9 @@ export const shell: Program = async function* (
       write: (data: string) => void;
       close: () => void;
     } => {
-      const path = target.startsWith("/") ? target : `${CURRENT_DIR}/${target}`;
+      const path = target.startsWith("/")
+        ? target
+        : `${getWorkingDirectory()}/${target}`;
       let file = fs.open(path);
       if (!file) {
         file = fs.createFile(path);
@@ -162,7 +170,7 @@ export const shell: Program = async function* (
       return (async () => {
         const procVariables = {
           ...variables,
-          PWD: CURRENT_DIR,
+          PWD: getWorkingDirectory(),
         };
 
         let resolve: () => void = () => {};
@@ -200,26 +208,12 @@ export const shell: Program = async function* (
     await Promise.all(processes);
   };
 
-  const history: string[] = [];
-  let historyCounter: number = 0;
+  const getPrompt = () =>
+    `${color["red"]("guest@localhost")}:${color["yellow"](
+      getWorkingDirectory()
+    )} `;
 
-  const prefix = `${color["red"]("guest@localhost")}:${color["yellow"](
-    "/home/guest"
-  )} `;
-
-  terimal.write(prefix);
-
-  function getHistoryCommand(delta: number) {
-    historyCounter += delta;
-    if (historyCounter < -1) historyCounter = -1;
-    if (historyCounter === -1) return "";
-
-    if (historyCounter >= history.length) {
-      historyCounter = history.length - 1;
-    }
-
-    return history[history.length - historyCounter - 1] || "";
-  }
+  terimal.write(getPrompt());
 
   let input = new HtmlLineInput(terimal);
 
@@ -255,14 +249,26 @@ export const shell: Program = async function* (
       if (result !== "") {
         terimal.write("\n");
         history.push(result);
-        executing = true;
-        execute(result).then((x) => {
-          terimal.write(prefix);
-          input = new HtmlLineInput(terimal); // todo перенести в аргументы
-          executing = false;
-        });
+
+        // todo to built-in command
+        const args = result
+          .split(" ")
+          .map((x) => x.trim())
+          .filter((x) => x !== "");
+        if (args.length > 0 && args[0] === "cd") {
+          if (args.length > 1) changeWorkingDirectory(args[1]);
+          terimal.write(getPrompt());
+          input = new HtmlLineInput(terimal);
+        } else {
+          executing = true;
+          execute(result).then((x) => {
+            terimal.write(getPrompt());
+            input = new HtmlLineInput(terimal); // todo перенести в аргументы
+            executing = false;
+          });
+        }
       } else {
-        terimal.write(`\n${prefix}`);
+        terimal.write(`\n${getPrompt()}`);
         input = new HtmlLineInput(terimal); // todo перенести в аргументы
       }
     }
@@ -278,22 +284,6 @@ export const shell: Program = async function* (
   // await terimal.closed();
 
   return 0;
-};
-
-export const getPrefix = (): PrintableText[] => {
-  return [
-    {
-      value: `${USERNAME}@${DOMAIN}`,
-      color: "gray",
-    },
-    {
-      value: ":",
-    },
-    {
-      value: (CURRENT_DIR === "" ? "/" : CURRENT_DIR) + " ",
-      color: "orange",
-    },
-  ];
 };
 
 function createStream(): Stream {
@@ -351,4 +341,19 @@ export const out = (data: string): StreamEvent => ({
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+const history: string[] = [];
+let historyCounter: number = 0;
+
+function getHistoryCommand(delta: number) {
+  historyCounter += delta;
+  if (historyCounter < -1) historyCounter = -1;
+  if (historyCounter === -1) return "";
+
+  if (historyCounter >= history.length) {
+    historyCounter = history.length - 1;
+  }
+
+  return history[history.length - historyCounter - 1] || "";
 }

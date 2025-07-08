@@ -1,5 +1,4 @@
 import { Disk } from "../disk/disk";
-import { changeCurrentDir } from "../shell/env";
 import { parseArgs } from "../shell/parsing";
 import { colorToConvert } from "../shell/print";
 import { err, out } from "../shell/shell";
@@ -61,6 +60,14 @@ export class Jinux implements Core {
       return parts.join("/") || "/";
     };
 
+    const changeWorkingDirectory = (path: string) => {
+      path = getPathTo(path);
+      const dir = this.fs.find(path);
+      if (dir && (dir.type === "d" || dir.type === "r"))
+        process.workingDirectory = getPathTo(path);
+      // else this.print("Path to found\n"); // todo
+    };
+
     this.processes[processId] = process;
     const iterator = command(stdin, args, {
       color: colorToConvert,
@@ -73,13 +80,6 @@ export class Jinux implements Core {
           this.fs.makeDirectory(getPathTo(path)),
         createFile: (path: string) => this.fs.makeFile(getPathTo(path)),
         getPathTo,
-        changeWorkingDirectory: (path: string) => {
-          path = getPathTo(path);
-          const dir = this.fs.find(path);
-          if (dir && (dir.type === "d" || dir.type === "r"))
-            changeCurrentDir(path);
-          // else this.print("Path to found\n"); // todo
-        },
         makeSysFile: (path: string, command: Program) =>
           this.fs.makeSysFile(getPathTo(path), command),
       },
@@ -91,7 +91,8 @@ export class Jinux implements Core {
       },
       variables,
       id: processId,
-      changeDirectory: (path: string) => (process.workingDirectory = path), // todo validate
+      getWorkingDirectory: () => process.workingDirectory,
+      changeWorkingDirectory,
     });
 
     const iterate = () => {
