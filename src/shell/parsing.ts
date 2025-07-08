@@ -9,172 +9,185 @@ export interface CommandToken {
   redirects: RedirectToken[]; // перенаправления
 }
 
+type Quoted = "single" | "double" | null;
+
+interface RawToken {
+  text: string;
+  quoted: Quoted;
+}
+
+export interface Redirect {
+  fd: number;
+  type: ">" | ">>" | "<" | "<<" | ">&" | "<&";
+  target: string;
+}
+
+export interface CommandToken {
+  args: string[];
+  redirects: Redirect[];
+}
+
 export type Parsed = CommandToken[];
 
-export function shellParse(input: string): Parsed {
-  const tokens = tokenize(input);
+export function shellParse(
+  input: string,
+  env: Record<string, string>,
+  funcs: Record<string, (...args: string[]) => string>,
+  getFormatter: (
+    varName: string
+  ) => ((value: string, format: string) => string) | undefined
+): Parsed {
+  // 1) raw-токены + информация про кавычки
+  const raw = tokenize(input);
+
+  // 2) выполняем все подстановки в нужном порядке
+  const tokens = raw.map(({ text, quoted }) => {
+    if (quoted === "single") {
+      // в одинарных — ничего не трогаем
+      return text;
+    }
+    let s = text;
+
+    // 2.1) сначала — командная подстановка $(fn[,arg1,…])
+    s = s.replace(/\$\(\s*([^)]+?)\s*\)/g, (_, call: string) => {
+      // разбиваем по запятой: fnName, arg1, arg2…
+      const [fnName, ...args] = call.split(",").map((x) => x.trim());
+      const fn = funcs[fnName];
+      if (typeof fn !== "function") {
+        throw new Error(`Неизвестная функция $(${fnName})`);
+      }
+      return fn(...args);
+    });
+
+    // 2.2) затем — форматирование ${VAR:fmt} или обычная подстановка ${VAR}
+    s = s.replace(/\$\{(\w+)(?::([^}]+))?\}/g, (_, varName, fmt) => {
+      const val = env[varName] ?? "";
+      if (fmt) {
+        const formatter = getFormatter(varName);
+        return formatter ? formatter(val, fmt) : val;
+      }
+      return val;
+    });
+
+    // 2.3) и напоследок — простое $VAR
+    s = s.replace(/\$(\w+)/g, (_, v) => env[v] ?? "");
+
+    return s;
+  });
+
+  // 3) остальная логика — пайпы и редиректы (без изменений)
   const commands: CommandToken[] = [];
+  let current: CommandToken = { args: [], redirects: [] };
 
-  let currentCmd: CommandToken = { args: [], redirects: [] };
-
-  let i = 0;
-  while (i < tokens.length) {
-    const token = tokens[i];
-
-    if (token === "|") {
-      if (currentCmd.args.length === 0)
-        throw new Error("Пустая команда перед |");
-      commands.push(currentCmd);
-      currentCmd = { args: [], redirects: [] };
+  for (let i = 0; i < tokens.length; ) {
+    const tok = tokens[i];
+    if (tok === "|") {
+      if (!current.args.length) throw new Error("Пустая команда перед |");
+      commands.push(current);
+      current = { args: [], redirects: [] };
       i++;
       continue;
     }
-
-    if (isRedirect(token)) {
-      const { fd, type } = parseRedirectToken(token);
+    if (isRedirect(tokens[i])) {
+      const { fd, type } = parseRedirectToken(tokens[i]);
       i++;
       if (i >= tokens.length)
-        throw new Error("Ожидается цель перенаправления после " + token);
-      const target = tokens[i];
-      currentCmd.redirects.push({ fd, type, target });
+        throw new Error(`Ожидается цель перенаправления после ${type}`);
+      current.redirects.push({ fd, type, target: tokens[i] });
       i++;
       continue;
     }
-
-    currentCmd.args.push(token);
+    current.args.push(tok);
     i++;
   }
-
-  if (currentCmd.args.length > 0 || currentCmd.redirects.length > 0) {
-    commands.push(currentCmd);
+  if (current.args.length || current.redirects.length) {
+    commands.push(current);
   }
-
   return commands;
 }
 
-function tokenize(input: string): string[] {
-  const tokens: string[] = [];
-  let i = 0;
-  const len = input.length;
-  let current = "";
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
+function tokenize(input: string): RawToken[] {
+  const res: RawToken[] = [];
+  let buf = "";
+  let ctx: Quoted = null;
+  const push = () => {
+    if (buf) {
+      res.push({ text: buf, quoted: ctx });
+      buf = "";
+    }
+  };
 
-  while (i < len) {
+  for (let i = 0; i < input.length; ) {
     const c = input[i];
-
-    if (inSingleQuote) {
-      if (c === "'") {
-        inSingleQuote = false;
-        i++;
-      } else {
-        current += c;
-        i++;
-      }
-      continue;
-    }
-
-    if (inDoubleQuote) {
-      if (c === '"') {
-        inDoubleQuote = false;
-        i++;
-      } else {
-        current += c;
-        i++;
-      }
-      continue;
-    }
-
-    if (c === "'") {
-      inSingleQuote = true;
+    if (c === "'" && ctx !== "double") {
+      push();
+      ctx = ctx === "single" ? null : "single";
       i++;
       continue;
     }
-
-    if (c === '"') {
-      inDoubleQuote = true;
+    if (c === '"' && ctx !== "single") {
+      push();
+      ctx = ctx === "double" ? null : "double";
       i++;
       continue;
     }
-
-    if (/\s/.test(c)) {
-      if (current.length > 0) {
-        tokens.push(current);
-        current = "";
-      }
+    if (!ctx && /\s/.test(c)) {
+      push();
       i++;
       continue;
     }
-
-    if (c === "|" || c === "<" || c === ">") {
-      if (current.length > 0) {
-        tokens.push(current);
-        current = "";
-      }
-      // Учтём возможные двойные символы >>, <<, >&, <&
-      if ((c === ">" || c === "<") && input[i + 1] === c) {
-        tokens.push(c + c);
-        i += 2;
-      } else if ((c === ">" || c === "<") && input[i + 1] === "&") {
-        tokens.push(c + "&");
+    if (!ctx && (c === "|" || c === "<" || c === ">")) {
+      push();
+      const nxt = input[i + 1];
+      if ((c === ">" || c === "<") && (nxt === c || nxt === "&")) {
+        res.push({ text: c + nxt, quoted: null });
         i += 2;
       } else {
-        tokens.push(c);
+        res.push({ text: c, quoted: null });
         i++;
       }
       continue;
     }
-
-    if (/\d/.test(c) && (input[i + 1] === ">" || input[i + 1] === "<")) {
-      if (current.length > 0) {
-        tokens.push(current);
-        current = "";
-      }
-      tokens.push(c + input[i + 1]);
+    if (!ctx && /\d/.test(c) && /[<>]/.test(input[i + 1])) {
+      push();
+      res.push({ text: c + input[i + 1], quoted: null });
       i += 2;
       continue;
     }
-
-    current += c;
+    buf += c;
     i++;
   }
-
-  if (current.length > 0) {
-    tokens.push(current);
-  }
-
-  return tokens;
+  push();
+  return res;
 }
 
-function isRedirect(token: string): boolean {
-  return (
-    token === ">" ||
-    token === ">>" ||
-    token === "<" ||
-    token === "<<" ||
-    token === ">&" ||
-    token === "<&" ||
-    /^\d[<>]$/.test(token)
-  );
+function isRedirect(tok: string): boolean {
+  return /^(?:\d[<>]|>>?|<<?|[<>][&])$/.test(tok);
 }
 
 function parseRedirectToken(token: string): {
   fd: number;
-  type: RedirectToken["type"];
+  type: Redirect["type"];
 } {
   if (/^\d[<>]$/.test(token)) {
-    return { fd: Number(token[0]), type: token[1] as RedirectToken["type"] };
+    return { fd: +token[0], type: token[1] as any };
   }
-  if (token === ">" || token === ">>") {
-    return { fd: 1, type: token };
+  switch (token) {
+    case ">":
+      return { fd: 1, type: ">" };
+    case ">>":
+      return { fd: 1, type: ">>" };
+    case "<":
+      return { fd: 0, type: "<" };
+    case "<<":
+      return { fd: 0, type: "<<" };
+    case ">&":
+      return { fd: 1, type: ">&" };
+    case "<&":
+      return { fd: 0, type: "<&" };
+    default:
+      throw new Error("Неизвестный редирект: " + token);
   }
-  if (token === "<" || token === "<<") {
-    return { fd: 0, type: token };
-  }
-  if (token === ">&" || token === "<&") {
-    return { fd: 1, type: token };
-  }
-  throw new Error("Неизвестный тип перенаправления " + token);
 }
 
 export type ParsedArgs = {

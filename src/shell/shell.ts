@@ -58,7 +58,7 @@ export const shell: Program = async function* (
 
     const commands = getPathCommands();
 
-    const parsed = shellParse(text);
+    const parsed = shellParse(text, variables, {}, () => undefined);
     const commandsToExecute: CommandToExecute[] = [];
     for (let { args, redirects } of parsed) {
       const commandName = args[0];
